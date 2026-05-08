@@ -1,0 +1,35 @@
+@import "tailwindcss";
+/* || VARIABLES */
+/* CHANGE THE DATA BELOW AS NEEDED */
+:root {
+    /* FONTS */
+    --FF: "DM Serif Text", serif;
+    --FS: clamp(1rem, 2.2vh, 1.5rem);
+
+    /* COLORS */
+    --BGCOLOR: #35654d;
+    --BGCOLOR-CARD: whitesmoke;
+    --FONT-COLOR: #000;
+    --HEADER-FONT-COLOR: whitesmoke;
+    --BORDER-COLOR: #000;
+    --BOX-SHADOW-COLOR: rgba(0, 0, 0, 0.3);
+    --TEXT-SHADOW-COLOR: #000;
+
+    /* BORDERS */
+    --BORDERS: 1px solid var(--BORDER-COLOR);
+    --BORDER-RADIUS: 1rem;
+
+    /* SHADOWS */
+    --BOX-SHADOW: 0 5px 8px var(--BOX-SHADOW-COLOR);
+    --TEXT-SHADOW: 3px 3px 8px var(--TEXT-SHADOW-COLOR);
+
+    /* STANDARD PADDINGS */
+    --PADDING-MAIN: 1rem;
+    --PADDING-BODY: 0 1rem;
+    --PADDING-CARD: 0.5rem;
+    --PADDING-HEADER: 2rem;
+
+    /* STANDARD MARGINS */
+    --MARGIN-MAIN: 2rem auto;
+    --MARGIN-HEADER: 0 auto;
+}
