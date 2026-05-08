@@ -9,19 +9,20 @@ export class MatchController {
 
     async joinGame({ match_id, player }, socket) {
         await socket.join(match_id)
+        const sessionPlayer = this.playerFromSocket(socket, player)
 
         this.socketPlayerMap.set(socket.id, {
             match_id,
-            player_id: String(player.player_id)
+            player_id: String(sessionPlayer.player_id)
         })
 
-        await this.service.joinGame(match_id, player)
+        await this.service.joinGame(match_id, sessionPlayer)
         await this.broadcastMatchState(match_id)
     }
 
     async endTurn({ match_id, player_id, plays = [] }, socket) {
         try {
-            const match = await this.service.endTurn(match_id, player_id, plays)
+            const match = await this.service.endTurn(match_id, socket.data.user.id, plays)
 
             await this.broadcastMatchState(match_id)
 
@@ -53,6 +54,16 @@ export class MatchController {
 
     disconnect(socket) {
         this.socketPlayerMap.delete(socket.id)
+    }
+
+    playerFromSocket(socket, player = {}) {
+        const user = socket.data.user
+
+        return {
+            player_id: String(user.id),
+            username: user.name || user.email || 'Player',
+            selected_deck_id: player.selected_deck_id ?? null
+        }
     }
 
     sleep(ms) {

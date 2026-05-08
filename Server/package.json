@@ -1,5 +1,5 @@
 {
-  "name": "code-clash",
+  "name": "stacked",
   "private": true,
   "main": "server.js",
   "version": "0.0.0",
@@ -7,10 +7,13 @@
   "scripts": {},
   "overrides": {},
   "dependencies": {
+    "@better-auth/mongo-adapter": "^1.6.9",
+    "better-auth": "^1.6.9",
     "body-parser": "^2.2.2",
     "compression": "^1.8.1",
     "config": "^4.4.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mongoose": "^9.6.1",
     "socket.io": "^4.8.3"

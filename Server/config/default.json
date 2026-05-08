@@ -2,7 +2,7 @@
  "mongoDB": {
    "host": "localhost",
    "port": "27017",
-   "dbname": "code-clash",
+   "dbname": "stacked"
  },
  "port": 3000
 }

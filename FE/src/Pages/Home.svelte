@@ -1,14 +1,15 @@
 <script>
-    import { Router, route, goto } from '@mateothegreat/svelte5-router'
+    import { route, goto } from '@mateothegreat/svelte5-router'
     import { matchState } from './MatchState.svelte.js'
     import { onMount } from 'svelte'
-    import { player } from './Player.svelte.js'
-
+    import { sessionState } from '../lib/auth/session.svelte.js'
+    import { connectionState } from '../Socket.svelte.js'
 
     onMount(async () => {
+        await sessionState.refresh()
+        if (!sessionState.isAuthenticated) return
+        await connectionState.connectToHost('localhost')
         await init()
-        player.player_id = window.localStorage.getItem('userId')
-        player.username = window.localStorage.getItem('username')
     })
 
 
@@ -26,35 +27,64 @@
         goto('/match')
     }
 
+    let email = $state()
+    let name = $state()
+    let password = $state()
+    let mode = $state('sign-in')
 
-    const save = () => {
-        window.localStorage.setItem('userId', player.player_id)
-        window.localStorage.setItem('username', player.username)
-    }
 
+	const submitAuth = async () => {
+        if (mode === 'sign-up') {
+            await sessionState.signUp(email, password, name)
+        } else {
+            await sessionState.signIn(email, password)
+        }
+
+        await connectionState.connectToHost('localhost')
+        await init()
+	}
 
 </script>
 
 <div class='h-full w-full flex flex-col items-center justify-between '>
 	<div class='rounded-full bg-white p-6'></div>
-	<div>
-		<input class='border border-red-500 text-white' type='text' bind:value={player.player_id} placeholder='id'/>
-		<input class='border border-red-500 text-white' type='text' bind:value={player.username} placeholder='Username'/>
+    {#if sessionState.isAuthenticated}
+        <div class='flex flex-col gap-2 text-white'>
+            <div>{sessionState.user.name || sessionState.user.email}</div>
+            <button class='bg-red-500 text-white px-4 py-2' onclick={() => sessionState.signOut()}>
+                Sign out
+            </button>
+        </div>
+    {:else}
+	<div class='flex flex-col gap-3'>
+        <div class='flex gap-2'>
+            <button class='bg-white text-black px-3 py-2' onclick={() => mode = 'sign-in'}>Sign in</button>
+            <button class='bg-white text-black px-3 py-2' onclick={() => mode = 'sign-up'}>Sign up</button>
+        </div>
+		<input class='border border-red-500 text-white' type='email' bind:value={email} placeholder='email'/>
+        {#if mode === 'sign-up'}
+		    <input class='border border-red-500 text-white' type='text' bind:value={name} placeholder='name'/>
+        {/if}
+		<input class='border border-red-500 text-white' type='password' bind:value={password} placeholder='password'/>
+        {#if sessionState.error}
+            <div class='text-red-400'>{sessionState.error}</div>
+        {/if}
+
+		<button type='submit' class='bg-blue-500 text-white' onclick={submitAuth} disabled={sessionState.loading}>
+            {mode === 'sign-up' ? 'Create account' : 'Sign in'}
+        </button>
 	</div>
-
-
+    {/if}
 	<button class='px-6 py-3 border bg-white'
-			onclick={() => save()}>
-		SAVE
-	</button>
-	<button class='px-6 py-3 border bg-white'
-			onclick={() => create()}>
+	        onclick={() => create()}
+            disabled={!sessionState.isAuthenticated}>
 		Create
 	</button>
 
 	{#each matchState.matches as match}
 		<button class='px-6 py-3 border bg-white rounded'
-				onclick={() => join(match.match_id) }>
+		        onclick={() => join(match.match_id) }
+                disabled={!sessionState.isAuthenticated}>
 			Game: { match.match_id}
 		</button>
 	{/each}
