@@ -1,23 +1,28 @@
 <script>
-    import { Router } from "@mateothegreat/svelte5-router";
+    import { Router } from '@mateothegreat/svelte5-router'
     import { routes } from './routes'
     import { onMount } from 'svelte'
-	import { connectionState } from './Socket.svelte'
+    import { connectionState } from './Socket.svelte'
     import { sessionState } from './lib/auth/session.svelte.js'
 
-	onMount(async () => {
+    let mainLoading = $state(true)
+
+    onMount(async () => {
         await sessionState.refresh()
         if (sessionState.isAuthenticated) {
             await connectionState.connectToHost('localhost').catch(() => {})
         }
-	})
+
+        mainLoading = false
+        console.log('mainLoading', mainLoading)
+    })
 
     $effect(() => {
-        if (sessionState.isAuthenticated && !connectionState.code?.socket?.connected) {
+        if (sessionState.isAuthenticated && ! connectionState.code?.socket?.connected) {
             connectionState.connectToHost('localhost').catch(() => {})
         }
 
-        if (!sessionState.isAuthenticated && connectionState.code?.socket?.connected) {
+        if ( ! sessionState.isAuthenticated && connectionState.code?.socket?.connected) {
             connectionState.disconnectAll()
         }
     })
@@ -25,7 +30,6 @@
 </script>
 
 
-
-<main class='h-screen w-screen bg-gray-950'>
-	<Router {routes} />
+<main class='h-screen flex flex-col border w-screen bg-background'>
+	<Router {routes}/>
 </main>

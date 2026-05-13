@@ -1,5 +1,5 @@
-import { connectionState } from '../Socket.svelte.js'
-import { player } from './Player.svelte.js'
+import { connectionState } from '../../Socket.svelte.js'
+import { player } from '../Player.svelte.js'
 
 
 export let matchState = $state({

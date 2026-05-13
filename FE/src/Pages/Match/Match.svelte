@@ -1,8 +1,11 @@
 <script>
-    import Card from '../lib/Card.svelte'
+    import Card from '../../lib/Card.svelte'
     import { matchState } from './MatchState.svelte.js'
-    import { connectionState } from '../Socket.svelte.js'
-    import { player } from './Player.svelte.js'
+    import { connectionState } from '../../Socket.svelte.js'
+    import { player } from '../Player.svelte.js'
+    import Avatar from '$lib/user/Avatar.svelte'
+    import { Button } from '$lib/components/ui/button/index.js'
+    import { Badge } from '$lib/components/ui/badge/index.js'
 
     let matchId = $derived(matchState.game?.match_id)
 
@@ -34,7 +37,7 @@
             ]
         }
     })))
-    const myHand = $derived((game?.me?.hand ?? []).filter(card => !stagedCardIds.has(card.instanceId)))
+    const myHand = $derived((game?.me?.hand ?? []).filter(card => ! stagedCardIds.has(card.instanceId)))
 
     const selectCard = (card) => {
         if (card?.hidden) return
@@ -44,7 +47,7 @@
     }
 
     const addCard = (locationId) => {
-        if (!selected) return
+        if ( ! selected) return
         if (me?.lockedIn) return
         if (game?.phase !== 'play') return
         if (selected.cost > availableEnergy) return
@@ -85,14 +88,14 @@
         const locationModifierRows = (cards, ownerLabel) => {
             return cards.flatMap(card => [
                 {
-                    label: `${card.title} base`,
+                    label: `${ card.title } base`,
                     power: card.power.basePower,
                     source: { name: ownerLabel },
                     description: 'Base card power'
                 },
                 ...card.power.modifiers.map(modifier => ({
                     ...modifier,
-                    label: `${card.title}: ${modifier.label}`,
+                    label: `${ card.title }: ${ modifier.label }`,
                     source: modifier.source ?? { name: ownerLabel }
                 }))
             ])
@@ -110,7 +113,7 @@
     }
 
     const locationClick = (location) => {
-        if (selected && !me?.lockedIn && game?.phase === 'play') {
+        if (selected && ! me?.lockedIn && game?.phase === 'play') {
             addCard(location.id)
             return
         }
@@ -148,41 +151,26 @@
 
 <div class='match-layout'>
 	<div class='flex justify-between bg-gray-900 h-full'>
-		<div class='flex flex-col items-start justify-between w-full h-full p-4'>
-			<div class='p-8 rounded-full bg-white text-black'>
-				{opponent?.username ?? 'Waiting...'}
-			</div>
+		<div class='flex flex-col items-end justify-between w-full h-full p-4'>
 
-			<div class='place-self-end p-4 rounded-full bg-blue-500 text-white'>
-				Energy: {opponent?.energy ?? 0}
-			</div>
+			<Button>
+				{me?.username ?? 'Me'}
 
-			<div class='text-white'>
-				Hand: {opponent?.handCount ?? 0}
-			</div>
+			</Button>
 
-			<div class='text-white'>
-				Committed: {opponent?.pendingCount ?? 0}
-			</div>
+			<Badge class='px-12 py-6 bg-blue-500 text-white dark:bg-blue-600'>
+				{availableEnergy}
+			</Badge>
 
-			<div class='text-white'>
-				{#if game?.phase === 'reveal'}
-					Revealing...
-				{:else if opponent?.lockedIn}
-					Opponent ended turn
-				{:else}
-					Opponent thinking...
-				{/if}
-			</div>
-
-			<button class='p-6 rounded-full bg-red-500 text-white'>
+			<Button size='lg' class='px-12 py-6'
+					variant='destructive'>
 				Retreat
-			</button>
+			</Button>
 		</div>
 	</div>
 
 	<div class='center-panel'>
-		<div class='border border-red-500 h-full w-full min-h-0'>
+		<div class=' h-full w-full min-h-0'>
 			<div class='board-grid'>
 				{#each board as b}
 					<div class='location-column'>
@@ -196,19 +184,15 @@
 							{/each}
 						</div>
 
-						<button
-								class='location-card'
-								on:click={() => locationClick(b)}
-						>
-							<div class='location-power-row'>
-								<span>{locationPowerTotal(b.power?.opponent)}</span>
-								<span>{locationPowerTotal(b.power?.me)}</span>
-							</div>
+						<div class='location-card  flex flex-col items-center   justify-between border border-dashed border-primary rounded p-1 ' onclick={() => locationClick(b)}>
+							<div class='border px-3 bg-secondary rounded-full'>{locationPowerTotal(b.power?.opponent)}</div>
 							<div>{b.name}</div>
-							{#if !b.revealed}
+							<div class='text-xs'>{b.effect}</div>
+							{#if ! b.revealed}
 								<small>Unrevealed</small>
 							{/if}
-						</button>
+							<div class='border px-3 bg-secondary rounded-full'>{locationPowerTotal(b.power?.me)}</div>
+						</div>
 
 						<div class='card-zone'>
 							{#each b.slots.me as card}
@@ -227,7 +211,7 @@
 				{#each myHand as card}
 					<button
 							class:selected-card={selected?.instanceId === card.instanceId}
-							on:click={() => {
+							onclick={() => {
 								selectCard(card)
 								inspectCard(card)
 							}}
@@ -242,35 +226,52 @@
 
 	<div class='flex justify-between bg-gray-900 h-full'>
 		<div class='flex flex-col items-start justify-between w-full h-full p-4'>
-			<div class='p-8 rounded-full bg-white text-black'>
-				{me?.username ?? 'Me'}
+
+			<Button>
+				{opponent?.username ?? 'Waiting...'}
+			</Button>
+
+
+			<!--			<div class='text-white'>
+							Hand: {opponent?.handCount ?? 0}
+						</div>
+
+						<div class='text-white'>
+							Committed: {opponent?.pendingCount ?? 0}
+						</div>-->
+
+			<div class='text-white'>
+				{#if game?.phase === 'reveal'}
+					Revealing...
+				{:else if opponent?.lockedIn}
+					Opponent ended turn
+				{:else}
+					Opponent thinking...
+				{/if}
 			</div>
 
-			<div class='place-self-start p-4 rounded-full bg-orange-500 text-white'>
-				Energy: {availableEnergy}
-			</div>
 
 			<div class='text-white'>
 				Turn: {game?.turn ?? 1}
 			</div>
 
-			<div class='text-white'>
-				{#if game?.phase === 'reveal'}
-					Revealing...
-				{:else if me?.lockedIn}
-					Turn ended
-				{:else}
-					Choose cards
-				{/if}
-			</div>
+			<!--			<div class='text-white'>
+							{#if game?.phase === 'reveal'}
+								Revealing...
+							{:else if me?.lockedIn}
+								Turn ended
+							{:else}
+								Choose cards
+							{/if}
+						</div>-->
 
-			<button
-					class='p-6 rounded-full bg-green-500 text-white'
-					on:click={endTurn}
+			<Button size='lg' class='px-12 py-6'
+					variant='outline'
+					onclick={endTurn}
 					disabled={me?.lockedIn || game?.phase !== 'play'}
 			>
 				End Turn
-			</button>
+			</Button>
 
 			{#if inspected}
 				<div class='inspector'>
@@ -291,7 +292,7 @@
 								<li>
 									<span>{modifier.power > 0 ? '+' : ''}{modifier.power}</span>
 									<span>{modifier.label}</span>
-									<small>{modifier.source?.name ?? 'Unknown source'} {modifier.description ? `- ${modifier.description}` : ''}</small>
+									<small>{modifier.source?.name ?? 'Unknown source'} {modifier.description ? `- ${ modifier.description }` : ''}</small>
 								</li>
 							{/each}
 						</ul>
@@ -311,7 +312,7 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background-color: rgb(30 58 138);
+        background-color: rgb(0, 4, 12);
     }
 
     .center-panel {
@@ -347,7 +348,7 @@
         gap: clamp(0.25rem, 0.8vw, 0.5rem);
         align-self: center;
         justify-self: center;
-       	width: 100%;
+        width: 100%;
         height: 100%;
         max-width: 100%;
         min-height: 0;
@@ -357,20 +358,16 @@
     }
 
     .location-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+
         width: 100%;
         min-width: 0;
-        padding: clamp(0.5rem, 1.5vw, 1rem);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 0.75rem;
+
+
         text-align: center;
         font-size: clamp(0.85rem, 1.6vw, 1.35rem);
         font-weight: 700;
-        background: rgb(31 41 55);
-        color: white;
+
+
         cursor: pointer;
     }
 

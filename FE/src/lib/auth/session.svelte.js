@@ -13,6 +13,7 @@ export const sessionState = $state({
     },
 
     apply(session) {
+        console.log('Session', session)
         this.session = session?.session ?? null
         this.user = session?.user ?? null
 
