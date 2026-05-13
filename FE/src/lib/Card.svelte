@@ -1,207 +1,269 @@
 <script>
+    let { card, onclick, ondblclick, large = false } = $props()
 
-    let { card, onclick } = $props()
+    const defaultBackground = [
+        'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)'
+    ].join(', ')
 
+    const fallbackLogoText = (card) => {
+        const source = card?.logoText || card?.title || card?.cardId || '?'
+        return source.slice(0, 2).toUpperCase()
+    }
+
+    const cardStyle = (card) => {
+        const borderColor = card?.borderColor || '#70d900'
+        const backgroundCss = card?.backgroundCss || defaultBackground
+
+        return [
+            `--card-border: ${borderColor}`,
+            `--card-bg: ${backgroundCss}`
+        ].join('; ')
+    }
+
+    const handleKeydown = (event) => {
+        if (!onclick || (event.key !== 'Enter' && event.key !== ' ')) return
+
+        event.preventDefault()
+        onclick(event)
+    }
+
+    const handleDblclick = (event) => {
+        ondblclick?.(event)
+    }
 </script>
 
+<div
+    class:large
+    class="snap-card"
+    style={cardStyle(card)}
+    onclick={onclick}
+    ondblclick={handleDblclick}
+    onkeydown={handleKeydown}
+    role={onclick ? 'button' : undefined}
+    tabindex={onclick ? 0 : undefined}
+    aria-label={card.title}
+>
+    <span class="snap-card__shell">
+        <span class="snap-card__grid"></span>
 
+        <span class="snap-card__stat snap-card__stat--cost">
+            <span class="snap-card__stat-label">C</span>
+            <span>{card.cost}</span>
+        </span>
 
+        <span class="snap-card__stat snap-card__stat--power">
+            <span class="snap-card__stat-label">P</span>
+            <span>{card.power}</span>
+        </span>
 
+        <span class="snap-card__logo" aria-hidden="true">
+            {#if card.logoUrl || card.artUrl}
+                <img
+                    src={card.logoUrl || card.artUrl}
+                    alt=""
+                    class="snap-card__logo-image"
+                />
+            {:else}
+                <span class="snap-card__logo-text">{fallbackLogoText(card)}</span>
+            {/if}
+        </span>
 
-
-
-
-<!-- Card -->
-<div class="snap-card"  onclick={onclick}>
-	<!-- Outer glow -->
-	<div class="snap-card__glow"></div>
-
-	<!-- Main frame -->
-	<div class="snap-card__frame">
-		<!-- Cost badge -->
-		<div class="snap-card__badge snap-card__badge--cost">{card.cost}</div>
-
-		<!-- Power badge -->
-		<div class="snap-card__badge snap-card__badge--power">{card.power}</div>
-
-		<!-- Artwork -->
-		<div class="snap-card__art">
-			<!-- Replace with your character image -->
-			<img
-					src={card.artUrl || 'https://placehold.co/300x400/png'}
-					alt={card.title}
-					class="snap-card__image"
-			/>
-		</div>
-
-		<!-- Name plate -->
-		<div class="snap-card__name">{card.title}</div>
-
-		{#if card.text}
-			<div class="snap-card__text">{card.text}</div>
-		{/if}
-
-	</div>
+        <span class="snap-card__title">{card.title}</span>
+    </span>
 </div>
 
 <style>
-    /* Root card container */
     .snap-card {
-        --card-width: 120px;
-        --card-height: 202px; /* 5:7 ratio */
-        --frame-primary: #5fd3ff;
-        --frame-secondary: #1e3a8a;
-        --gold: #ffd86b;
-        --silver: #dbe6f5;
+        --card-width: clamp(52px, 8vw, 120px);
+        --card-unit: calc(var(--card-width) / 120);
+        --card-border: #70d900;
+        --card-bg: linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%);
 
         position: relative;
         width: var(--card-width);
         aspect-ratio: 5 / 7;
-        font-family: Inter, system-ui, sans-serif;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #f8f8f2;
+        font: inherit;
+        text-align: left;
+        cursor: default;
         user-select: none;
     }
 
-    /* Soft outer glow */
-    .snap-card__glow {
+    .snap-card.large {
+        --card-width: min(240px, 45vw, 36dvh);
+    }
+
+    .snap-card[role="button"] {
+        cursor: pointer;
+    }
+
+    .snap-card__shell {
         position: absolute;
-        inset: -6px;
-        border-radius: 18px;
-
-        filter: blur(10px);
-        opacity: 0.7;
-        z-index: 0;
-    }
-
-    /* Main frame */
-    .snap-card__frame {
-        position: relative;
-        z-index: 1;
-        width: 100%;
-        height: 100%;
-        border-radius: 16px;
-        padding: 6px;
-        background:
-                linear-gradient(145deg, #ffffff 0%, #9adfff 10%, #1e40af 55%, #0b1120 100%);
+        inset: 0;
+        display: block;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--card-border) 66%, #2a2b30 34%);
+        border-radius: calc(4 * var(--card-unit));
+        background: var(--card-bg);
         box-shadow:
-                0 12px 24px rgba(0, 0, 0, 0.45),
-                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+            0 8px 18px rgba(0, 0, 0, 0.34);
+        transition:
+            transform 140ms ease,
+            box-shadow 140ms ease,
+            border-color 140ms ease;
     }
 
-    /* Inner panel */
-    .snap-card__frame::before {
+    .snap-card__shell::before {
         content: "";
         position: absolute;
-        inset: 5px;
-        border-radius: 12px;
-        background:
-                linear-gradient(180deg, #1f2937 0%, #0f172a 100%);
-        box-shadow:
-                inset 0 0 0 2px rgba(255,255,255,0.08);
-        z-index: 0;
-    }
-
-    /* Cost and Power badges */
-    .snap-card__badge {
-        position: absolute;
-        top: -10px;
-        width: 42px;
-        height: 42px;
-        border-radius: 999px;
-        display: grid;
-        place-items: center;
-        font-weight: 900;
-        font-size: 22px;
-        color: #fff;
-        text-shadow: 0 2px 3px rgba(0,0,0,0.5);
-        border: 3px solid rgba(255,255,255,0.95);
-        box-shadow:
-                0 4px 10px rgba(0,0,0,0.35),
-                inset 0 2px 4px rgba(255,255,255,0.25);
+        left: calc(8 * var(--card-unit));
+        right: calc(8 * var(--card-unit));
+        top: calc(38 * var(--card-unit));
+        height: 1px;
+        background: color-mix(in srgb, var(--card-border) 72%, transparent);
+        pointer-events: none;
         z-index: 3;
     }
 
-    .snap-card__badge--cost {
-        left: -10px;
-        background:
-                radial-gradient(circle at 30% 30%, #93c5fd, #2563eb 70%, #1e3a8a);
-    }
-
-    .snap-card__badge--power {
-        right: -10px;
-        background:
-                radial-gradient(circle at 30% 30%, #fda4af, #dc2626 70%, #7f1d1d);
-    }
-
-    /* Artwork area */
-    .snap-card__art {
+    .snap-card__shell::after {
+        content: "";
         position: absolute;
-        top: 14px;
-        left: 10px;
-        right: 10px;
-        height: 62%;
-        border-radius: 10px;
-        overflow: hidden;
+        left: calc(8 * var(--card-unit));
+        right: calc(8 * var(--card-unit));
+        bottom: calc(28 * var(--card-unit));
+        height: 1px;
         background:
-                radial-gradient(circle at top, #6ee7ff, #312e81 60%, #0f172a);
-        box-shadow:
-                inset 0 0 0 2px rgba(255,255,255,0.12);
+            linear-gradient(90deg, transparent, color-mix(in srgb, var(--card-border) 54%, transparent), transparent);
+        opacity: 0.78;
+        z-index: 4;
+        pointer-events: none;
+    }
+
+    .snap-card__grid {
+        position: absolute;
+        left: calc(11 * var(--card-unit));
+        right: calc(11 * var(--card-unit));
+        top: calc(48 * var(--card-unit));
+        height: calc(70 * var(--card-unit));
+        background:
+            linear-gradient(color-mix(in srgb, var(--card-border) 12%, transparent) 1px, transparent 1px),
+            linear-gradient(90deg, color-mix(in srgb, var(--card-border) 12%, transparent) 1px, transparent 1px);
+        background-size: calc(14 * var(--card-unit)) calc(14 * var(--card-unit));
+        opacity: 0.24;
         z-index: 1;
+        pointer-events: none;
     }
 
-    .snap-card__image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    /* Name plate */
-    .snap-card__name {
+    .snap-card__stat {
         position: absolute;
-        left: 16px;
-        right: 16px;
-        top: calc(62% + 18px);
-        height: 28px;
-        border-radius: 999px;
-        background:
-                linear-gradient(180deg, #fff7cc, #facc15);
-        color: #1f2937;
-        font-weight: 900;
-        font-size: 14px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
+        top: calc(8 * var(--card-unit));
+        z-index: 5;
         display: grid;
-        place-items: center;
-        border: 2px solid rgba(255,255,255,0.9);
-        box-shadow:
-                0 2px 6px rgba(0,0,0,0.25);
-        z-index: 2;
+        grid-template-columns: calc(9 * var(--card-unit)) 1fr;
+        align-items: center;
+        min-width: calc(31 * var(--card-unit));
+        height: calc(24 * var(--card-unit));
+        padding: 0 calc(6 * var(--card-unit)) 0 calc(5 * var(--card-unit));
+        border: 1px solid color-mix(in srgb, var(--card-border) 52%, #3b3c42 48%);
+        background: #111215;
+        box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--card-border) 42%, transparent);
+        color: #ffffff;
+        font-size: calc(14 * var(--card-unit));
+        font-weight: 900;
+        line-height: 1;
     }
 
-    /* Description box */
-    .snap-card__text {
+    .snap-card__stat--cost {
+        left: calc(8 * var(--card-unit));
+    }
+
+    .snap-card__stat--power {
+        right: calc(8 * var(--card-unit));
+    }
+
+    .snap-card__stat-label {
+        color: color-mix(in srgb, var(--card-border) 76%, white 24%);
+        font-size: calc(8 * var(--card-unit));
+        font-weight: 800;
+    }
+
+    .snap-card__logo {
         position: absolute;
-        left: 14px;
-        right: 14px;
-        bottom: 12px;
-        top: calc(62% + 52px);
-        border-radius: 10px;
-        padding: 8px;
+        left: 50%;
+        top: calc(78 * var(--card-unit));
+        z-index: 2;
+        display: grid;
+        width: calc(54 * var(--card-unit));
+        height: calc(54 * var(--card-unit));
+        place-items: center;
+        border: 1px solid color-mix(in srgb, var(--card-border) 46%, #3b3c42 54%);
+        border-radius: calc(4 * var(--card-unit));
         background:
-                linear-gradient(180deg, rgba(255,255,255,0.96), rgba(226,232,240,0.96));
-        color: #111827;
-        font-size: 11px;
-        line-height: 1.2;
-        font-weight: 700;
-        text-align: center;
-        box-shadow:
-                inset 0 0 0 2px rgba(255,255,255,0.85);
-        z-index: 1;
+            linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+            #141519;
+        box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--card-border) 34%, transparent);
+        transform: translate(-50%, -50%);
     }
 
-    /* Optional hover effect */
-    .snap-card:hover .snap-card__frame {
-        transform: translateY(-4px) scale(1.02);
-        transition: transform 0.15s ease;
+    .snap-card__logo::before {
+        content: "";
+        position: absolute;
+        inset: calc(6 * var(--card-unit));
+        border: 1px solid color-mix(in srgb, var(--card-border) 24%, transparent);
+        border-radius: calc(2 * var(--card-unit));
+    }
+
+    .snap-card__logo-image {
+        position: relative;
+        z-index: 1;
+        width: calc(36 * var(--card-unit));
+        height: calc(36 * var(--card-unit));
+        object-fit: contain;
+    }
+
+    .snap-card__logo-text {
+        position: relative;
+        z-index: 1;
+        color: color-mix(in srgb, var(--card-border) 72%, white 28%);
+        font-size: calc(21 * var(--card-unit));
+        font-weight: 950;
+        letter-spacing: 0;
+        text-shadow: 0 1px 0 #000;
+    }
+
+    .snap-card__title {
+        position: absolute;
+        left: calc(10 * var(--card-unit));
+        right: calc(10 * var(--card-unit));
+        bottom: calc(13 * var(--card-unit));
+        z-index: 5;
+        overflow: hidden;
+        color: #f8f8f2;
+        font-size: calc(12 * var(--card-unit));
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: calc(17 * var(--card-unit));
+        text-align: center;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 0 #000;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .snap-card:hover .snap-card__shell {
+        border-color: color-mix(in srgb, var(--card-border) 78%, white 8%);
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+            0 10px 20px rgba(0, 0, 0, 0.38);
+        transform: translateY(-2px);
+    }
+
+    .snap-card:focus-visible {
+        outline: 2px solid var(--card-border);
+        outline-offset: 3px;
     }
 </style>

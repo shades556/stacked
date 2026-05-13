@@ -5,17 +5,22 @@ export class OfficeLocation extends Location {
     afterCardRevealed(ctx, card) {
         if (card.locationId !== this.id) return
 
-        const targets = ctx.match.orderedLocations()
-            .filter(location => location.id !== this.id)
-            .filter(location => ctx.match.canCardMoveTo(card, location.id, [
-                CARD_ZONE.BOARD,
-                CARD_ZONE.PENDING
-            ]))
+        for (const effect of this.effectsFor('afterCardRevealed', 'MOVE_CARD')) {
+            if (effect.target !== 'revealedCard') continue
+            if (effect.destination !== 'randomOtherLocation') continue
 
-        const target = ctx.pickRandom(targets)
-        if (!target) return
+            const targets = ctx.match.orderedLocations()
+                .filter(location => location.id !== this.id)
+                .filter(location => ctx.match.canCardMoveTo(card, location.id, [
+                    CARD_ZONE.BOARD,
+                    CARD_ZONE.PENDING
+                ]))
 
-        ctx.moveCard(card.instanceId, target.id)
+            const target = ctx.pickRandom(targets)
+            if (!target) return
+
+            ctx.moveCard(card.instanceId, target.id)
+        }
     }
 }
 

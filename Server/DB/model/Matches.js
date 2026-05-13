@@ -19,9 +19,11 @@ const PlayerSchema = new mongoose.Schema({
 const LocationSchema = new mongoose.Schema({
     id: { type: String, required: true },
     locationId: { type: String, required: true },
+    behaviorKey: { type: String, default: null },
     name: { type: String, required: true },
     revealed: { type: Boolean, default: false },
     effect: { type: String, default: '' },
+    effects: { type: [mongoose.Schema.Types.Mixed], default: [] },
     order: { type: Number, default: 0 }
 }, schemaOptions)
 
@@ -34,7 +36,12 @@ const CardSchema = new mongoose.Schema({
     basePower: { type: Number, required: true, default: 0 },
     cost: { type: Number, required: true, default: 0 },
     text: { type: String, default: '' },
+    effects: { type: [mongoose.Schema.Types.Mixed], default: [] },
     artUrl: { type: String, default: '' },
+    logoUrl: { type: String, default: '' },
+    logoText: { type: String, default: '' },
+    borderColor: { type: String, default: '#70d900' },
+    backgroundCss: { type: String, default: '' },
     rarity: { type: String, default: 'common' },
     zone: { type: String, enum: enumValues(CARD_ZONE), required: true },
     locationId: { type: String, default: null },

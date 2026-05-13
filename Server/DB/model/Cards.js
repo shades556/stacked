@@ -8,6 +8,12 @@ const DEFAULT_CARD_DEFINITIONS = Object.freeze([
         basePower: 1,
         cost: 1,
         text: 'On reveal: draw a card.',
+        effects: [
+            { trigger: 'onReveal', type: 'DRAW_CARD', target: 'owner' }
+        ],
+        borderColor: '#70d900',
+        backgroundCss: 'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)',
+        logoText: 'JS',
         rarity: 'common',
         sortOrder: 10
     },
@@ -18,6 +24,12 @@ const DEFAULT_CARD_DEFINITIONS = Object.freeze([
         basePower: 4,
         cost: 4,
         text: 'Ongoing: +1 power to this card.',
+        effects: [
+            { trigger: 'ongoing', type: 'POWER_MODIFIER', target: 'self', power: 1 }
+        ],
+        borderColor: '#70d900',
+        backgroundCss: 'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)',
+        logoText: 'DK',
         rarity: 'common',
         sortOrder: 20
     },
@@ -121,7 +133,12 @@ function normalizeCardDefinition(card) {
         basePower: card.basePower ?? card.power ?? 0,
         cost: card.cost ?? 0,
         text: card.text ?? card.description ?? '',
+        effects: card.effects ?? [],
         artUrl: card.artUrl ?? '',
+        logoUrl: card.logoUrl ?? '',
+        logoText: card.logoText ?? card.title?.slice(0, 2)?.toUpperCase() ?? '',
+        borderColor: card.borderColor ?? '#70d900',
+        backgroundCss: card.backgroundCss ?? '',
         rarity: card.rarity ?? 'common',
         tags: card.tags ?? [],
         enabled: card.enabled ?? true,
@@ -140,7 +157,12 @@ const schema = new mongoose.Schema({
     basePower: { type: Number, required: true, default: 0 },
     cost: { type: Number, required: true, default: 0 },
     text: { type: String, default: '' },
+    effects: { type: [mongoose.Schema.Types.Mixed], default: [] },
     artUrl: { type: String, default: '' },
+    logoUrl: { type: String, default: '' },
+    logoText: { type: String, default: '' },
+    borderColor: { type: String, default: '#70d900' },
+    backgroundCss: { type: String, default: '' },
     rarity: { type: String, default: 'common' },
     tags: { type: [String], default: [] },
     enabled: { type: Boolean, default: true },

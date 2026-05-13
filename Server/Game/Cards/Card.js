@@ -8,7 +8,12 @@ export class Card {
         this.basePower = data.basePower ?? data.power ?? 0
         this.cost = data.cost ?? 0
         this.text = data.text ?? data.description ?? ''
+        this.effects = data.effects ?? []
         this.artUrl = data.artUrl ?? ''
+        this.logoUrl = data.logoUrl ?? ''
+        this.logoText = data.logoText ?? this.title?.slice(0, 2)?.toUpperCase() ?? ''
+        this.borderColor = data.borderColor ?? '#70d900'
+        this.backgroundCss = data.backgroundCss ?? ''
         this.rarity = data.rarity ?? 'common'
         this.zone = data.zone
         this.locationId = data.locationId ?? null
@@ -27,6 +32,13 @@ export class Card {
         return []
     }
 
+    effectsFor(trigger, type = null) {
+        return this.effects.filter(effect =>
+            effect.trigger === trigger &&
+            (!type || effect.type === type)
+        )
+    }
+
     toData() {
         return {
             instanceId: this.instanceId,
@@ -37,7 +49,12 @@ export class Card {
             basePower: this.basePower,
             cost: this.cost,
             text: this.text,
+            effects: this.effects,
             artUrl: this.artUrl,
+            logoUrl: this.logoUrl,
+            logoText: this.logoText,
+            borderColor: this.borderColor,
+            backgroundCss: this.backgroundCss,
             rarity: this.rarity,
             zone: this.zone,
             locationId: this.locationId,
@@ -55,7 +72,12 @@ export class Card {
             power: this.power,
             cost: this.cost,
             text: this.text,
+            effects: this.effects,
             artUrl: this.artUrl,
+            logoUrl: this.logoUrl,
+            logoText: this.logoText,
+            borderColor: this.borderColor,
+            backgroundCss: this.backgroundCss,
             rarity: this.rarity,
             revealed: this.revealed,
             ...extra

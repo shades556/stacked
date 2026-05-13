@@ -2,9 +2,11 @@ export class Location {
     constructor(data, match) {
         this.id = String(data.id)
         this.locationId = data.locationId ?? data.id
+        this.behaviorKey = data.behaviorKey ?? this.locationId
         this.name = data.name
         this.revealed = data.revealed ?? false
         this.effect = data.effect ?? ''
+        this.effects = data.effects ?? []
         this.order = data.order ?? 0
         this.match = match
     }
@@ -33,13 +35,22 @@ export class Location {
         return []
     }
 
+    effectsFor(trigger, type = null) {
+        return this.effects.filter(effect =>
+            effect.trigger === trigger &&
+            (!type || effect.type === type)
+        )
+    }
+
     toData() {
         return {
             id: this.id,
             locationId: this.locationId,
+            behaviorKey: this.behaviorKey,
             name: this.name,
             revealed: this.revealed,
             effect: this.effect,
+            effects: this.effects,
             order: this.order
         }
     }

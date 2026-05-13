@@ -10,7 +10,7 @@ const registry = {
 }
 
 export function createLocation(data, match) {
-    const LocationClass = registry[data.locationId] ?? Location
+    const LocationClass = registry[data.behaviorKey ?? data.locationId] ?? Location
     return new LocationClass(data, match)
 }
 

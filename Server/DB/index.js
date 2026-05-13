@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { exit, getConfigValue } from '../utils.js'
 import { ERR_MSG, MSG } from '../constants.js'
 import Cards from './model/Cards.js'
+import Locations from './model/Locations.js'
 import Matches from './model/Matches.js'
 
 const conf = getConfigValue({ value: 'mongoDB', defaultValue: {} })
@@ -31,6 +32,7 @@ mongoose.connection.on('disconnected', () => console.info(MSG.DB_DISCONNECTED))
 
 const model = {
     Cards,
+    Locations,
     Matches
 }
 

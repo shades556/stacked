@@ -1,9 +1,9 @@
 import { MatchService } from '../Services/MatchService.js'
 
 export class MatchController {
-    constructor(MatchModel, CardModel, io) {
+    constructor(MatchModel, CardModel, LocationModel, io) {
         this.io = io
-        this.service = new MatchService(MatchModel, CardModel)
+        this.service = new MatchService(MatchModel, CardModel, LocationModel)
         this.socketPlayerMap = new Map()
     }
 

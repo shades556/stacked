@@ -3,9 +3,10 @@ import { Match } from '../Game/Match.js'
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export class MatchService {
-    constructor(MatchModel, CardModel = null) {
+    constructor(MatchModel, CardModel = null, LocationModel = null) {
         this.model = MatchModel
         this.cardModel = CardModel
+        this.locationModel = LocationModel
     }
 
     async find(match_id) {
@@ -30,7 +31,12 @@ export class MatchService {
         match.addPlayer(player)
 
         if (match.canStart()) {
-            match.maybeStart(await this.cardDefinitions())
+            const [cards, locations] = await Promise.all([
+                this.cardDefinitions(),
+                this.locationDefinitions()
+            ])
+
+            match.maybeStart(cards, locations)
         }
 
         return this.save(match)
@@ -72,6 +78,14 @@ export class MatchService {
         }
 
         return this.cardModel.activeOrSeededDefinitions()
+    }
+
+    async locationDefinitions() {
+        if (!this.locationModel) {
+            throw new Error('Location catalog model not configured')
+        }
+
+        return this.locationModel.activeOrSeededDefinitions()
     }
 }
 

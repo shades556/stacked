@@ -13,33 +13,6 @@ import {
     MAX_TURNS
 } from './constants.js'
 
-const defaultLocations = [
-    {
-        id: '1',
-        locationId: 'server_room',
-        name: 'Server room',
-        revealed: true,
-        effect: '',
-        order: 0
-    },
-    {
-        id: '2',
-        locationId: 'office',
-        name: 'Office',
-        revealed: false,
-        effect: 'After a card reveals here, move it to a random location.',
-        order: 1
-    },
-    {
-        id: '3',
-        locationId: 'meeting_room',
-        name: 'Meeting room',
-        revealed: false,
-        effect: '',
-        order: 2
-    }
-]
-
 function shuffle(array) {
     const arr = [...array]
     for (let i = arr.length - 1; i > 0; i--) {
@@ -65,8 +38,7 @@ export class Match {
         this.turn = data.turn ?? 1
         this.priorityPlayer = data.priorityPlayer ?? null
         this.players = data.players ?? []
-        this.locations = (data.locations?.length ? data.locations : defaultLocations)
-            .map(location => createLocation(location, this))
+        this.locations = (data.locations ?? []).map(location => createLocation(location, this))
         this.cards = (data.cards ?? []).map(card => createCard(card))
         this.revealQueue = data.revealQueue ?? []
         this.log = data.log ?? []
@@ -130,18 +102,31 @@ export class Match {
         return this.players.length === 2 && this.status === MATCH_STATUS.OPEN
     }
 
-    maybeStart(cardDefinitions = []) {
+    maybeStart(cardDefinitions = [], locationDefinitions = []) {
         if (this.canStart()) {
-            this.start(cardDefinitions)
+            this.start(cardDefinitions, locationDefinitions)
         }
     }
 
-    start(cardDefinitions = []) {
+    start(cardDefinitions = [], locationDefinitions = []) {
         if (!Array.isArray(cardDefinitions) || cardDefinitions.length === 0) {
             throw new Error('Cannot start match without card definitions')
         }
+        if (!Array.isArray(locationDefinitions) || locationDefinitions.length === 0) {
+            throw new Error('Cannot start match without location definitions')
+        }
 
         this.cards = []
+        this.locations = locationDefinitions.map((definition, index) => createLocation({
+            id: String(index + 1),
+            locationId: definition.locationId,
+            behaviorKey: definition.behaviorKey ?? definition.locationId,
+            name: definition.name,
+            revealed: definition.defaultRevealed ?? index === 0,
+            effect: definition.effect ?? definition.description ?? '',
+            effects: definition.effects ?? [],
+            order: index
+        }, this))
 
         for (const player of this.players) {
             const deck = shuffle(cardDefinitions).map((definition, index) => createCard({
@@ -152,7 +137,12 @@ export class Match {
                 basePower: definition.basePower ?? definition.power ?? 0,
                 cost: definition.cost ?? 0,
                 text: definition.text ?? definition.description ?? '',
+                effects: definition.effects ?? [],
                 artUrl: definition.artUrl ?? '',
+                logoUrl: definition.logoUrl ?? '',
+                logoText: definition.logoText ?? definition.title?.slice(0, 2)?.toUpperCase() ?? '',
+                borderColor: definition.borderColor ?? '#70d900',
+                backgroundCss: definition.backgroundCss ?? '',
                 rarity: definition.rarity ?? 'common',
                 ownerId: String(player.player_id),
                 zone: index < 4 ? CARD_ZONE.HAND : CARD_ZONE.DECK,

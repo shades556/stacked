@@ -2,15 +2,15 @@ import { Card } from './Card.js'
 
 export class DockerCard extends Card {
     ongoing(ctx) {
-        return [
-            {
-                type: 'POWER_MODIFIER',
-                target: { instanceId: this.instanceId },
-                power: 1,
-                label: 'Docker ongoing',
-                description: '+1 power to this card'
-            }
-        ]
+        return this.effectsFor('ongoing', 'POWER_MODIFIER').map(effect => ({
+            type: 'POWER_MODIFIER',
+            target: effect.target === 'self'
+                ? { instanceId: this.instanceId }
+                : effect.target,
+            power: effect.power ?? 0,
+            label: effect.label ?? this.title,
+            description: effect.description ?? this.text
+        }))
     }
 }
 
