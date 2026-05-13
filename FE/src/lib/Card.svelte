@@ -2,8 +2,6 @@
 
     let { card, onclick } = $props()
 
-	$inspect(card)
-
 </script>
 
 
@@ -30,8 +28,8 @@
 		<div class="snap-card__art">
 			<!-- Replace with your character image -->
 			<img
-					src="https://placehold.co/300x400/png"
-					alt="Character"
+					src={card.artUrl || 'https://placehold.co/300x400/png'}
+					alt={card.title}
 					class="snap-card__image"
 			/>
 		</div>
@@ -39,6 +37,9 @@
 		<!-- Name plate -->
 		<div class="snap-card__name">{card.title}</div>
 
+		{#if card.text}
+			<div class="snap-card__text">{card.text}</div>
+		{/if}
 
 	</div>
 </div>

@@ -25,9 +25,9 @@
     }
 
     const join = async (id) => {
-        await matchState.joinGame(id)
+
         console.log('goto', id)
-        goto('/match')
+        goto(`/match`,  { id })
     }
 
 

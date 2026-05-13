@@ -8,7 +8,7 @@ const registry = {
 }
 
 export function createCard(data) {
-    const CardClass = registry[data.cardId] ?? Card
+    const CardClass = registry[data.behaviorKey ?? data.cardId] ?? Card
     return new CardClass(data)
 }
 

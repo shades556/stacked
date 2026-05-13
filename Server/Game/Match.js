@@ -10,8 +10,7 @@ import {
     MAX_CARDS_PER_LOCATION,
     MAX_ENERGY,
     MAX_HAND_SIZE,
-    MAX_TURNS,
-    MOCK_CARD_POOL
+    MAX_TURNS
 } from './constants.js'
 
 const defaultLocations = [
@@ -127,19 +126,34 @@ export class Match {
         })
     }
 
-    maybeStart() {
-        if (this.players.length === 2 && this.status === MATCH_STATUS.OPEN) {
-            this.start()
+    canStart() {
+        return this.players.length === 2 && this.status === MATCH_STATUS.OPEN
+    }
+
+    maybeStart(cardDefinitions = []) {
+        if (this.canStart()) {
+            this.start(cardDefinitions)
         }
     }
 
-    start() {
+    start(cardDefinitions = []) {
+        if (!Array.isArray(cardDefinitions) || cardDefinitions.length === 0) {
+            throw new Error('Cannot start match without card definitions')
+        }
+
         this.cards = []
 
         for (const player of this.players) {
-            const deck = shuffle(MOCK_CARD_POOL).map((definition, index) => createCard({
+            const deck = shuffle(cardDefinitions).map((definition, index) => createCard({
                 instanceId: randomUUID(),
-                ...definition,
+                cardId: definition.cardId,
+                behaviorKey: definition.behaviorKey ?? definition.cardId,
+                title: definition.title,
+                basePower: definition.basePower ?? definition.power ?? 0,
+                cost: definition.cost ?? 0,
+                text: definition.text ?? definition.description ?? '',
+                artUrl: definition.artUrl ?? '',
+                rarity: definition.rarity ?? 'common',
                 ownerId: String(player.player_id),
                 zone: index < 4 ? CARD_ZONE.HAND : CARD_ZONE.DECK,
                 locationId: null,

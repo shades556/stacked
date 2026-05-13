@@ -141,6 +141,6 @@ app.use(bodyParser.json({ limit: '10mb' }))
 connect()
     .then(() => server.listen(port, () => info(MSG.SERVER_LISTENING, port)))
     .then(async () => {
-        matchController = new MatchController(model.Matches, io)
+        matchController = new MatchController(model.Matches, model.Cards, io)
 
     })

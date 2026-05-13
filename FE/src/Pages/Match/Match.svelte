@@ -7,13 +7,25 @@
     import { Button } from '$lib/components/ui/button/index.js'
     import { Badge } from '$lib/components/ui/badge/index.js'
 
-    let matchId = $derived(matchState.game?.match_id)
+	import { onMount } from 'svelte'
+
+    let matchId = ''
 
     matchState.gameUpdate()
 
     let selected = $state(null)
     let stagedPlays = $state([])
     let inspected = $state(null)
+
+    let { route  } = $props()
+
+	onMount(async () => {
+        matchId = route.result.querystring.params.id
+        await matchState.joinGame(matchId)
+	})
+
+	$inspect('route', route)
+
 
     const game = $derived(matchState.game)
     const me = $derived(game?.me ?? null)
@@ -163,7 +175,7 @@
 			</Badge>
 
 			<Button size='lg' class='px-12 py-6'
-					variant='destructive'>
+			        variant='destructive'>
 				Retreat
 			</Button>
 		</div>
@@ -266,9 +278,9 @@
 						</div>-->
 
 			<Button size='lg' class='px-12 py-6'
-					variant='outline'
-					onclick={endTurn}
-					disabled={me?.lockedIn || game?.phase !== 'play'}
+			        variant='outline'
+			        onclick={endTurn}
+			        disabled={me?.lockedIn || game?.phase !== 'play'}
 			>
 				End Turn
 			</Button>

@@ -3,8 +3,9 @@ import { Match } from '../Game/Match.js'
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export class MatchService {
-    constructor(MatchModel) {
+    constructor(MatchModel, CardModel = null) {
         this.model = MatchModel
+        this.cardModel = CardModel
     }
 
     async find(match_id) {
@@ -27,7 +28,10 @@ export class MatchService {
         if (!match) throw new Error('Match not found')
 
         match.addPlayer(player)
-        match.maybeStart()
+
+        if (match.canStart()) {
+            match.maybeStart(await this.cardDefinitions())
+        }
 
         return this.save(match)
     }
@@ -60,6 +64,14 @@ export class MatchService {
         }
 
         return match
+    }
+
+    async cardDefinitions() {
+        if (!this.cardModel) {
+            throw new Error('Card catalog model not configured')
+        }
+
+        return this.cardModel.activeOrSeededDefinitions()
     }
 }
 
