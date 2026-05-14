@@ -182,7 +182,7 @@
     })
 </script>
 
-<div class='match-layout'>
+<div class='match-layout p-6 '>
 	<div class='player-rail player-rail--me'>
 		<div class='rail-content rail-content--me'>
 
@@ -271,9 +271,9 @@
 				{/each}
 			</div>
 
-			<div class='hand-zone'>
+			<div class='hand-zone border-blue-500/50 bg-gray-900/10 '>
 				{#each myHand as card}
-					<button
+					<button class='h-full'
 							class:selected-card={selected?.instanceId === card.instanceId}
 							onclick={() => {
 								selectCard(card)
@@ -443,17 +443,14 @@
         height: 100%;
         margin-inline: auto;
         overflow: hidden;
-
         color: #f8f8f2;
-        box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.06),
-            0 0 44px rgba(0, 0, 0, 0.45);
+
     }
 
     .player-rail {
         min-width: 0;
         height: 100%;
-        border-inline: 1px solid rgba(255, 255, 255, 0.08);
+
 
     }
 
@@ -545,11 +542,21 @@
         justify-items: center;
         min-width: 0;
         min-height: 0;
-        background:
-            linear-gradient(180deg, rgba(3, 8, 16, 0.96), rgba(0, 4, 12, 1));
+
     }
 
     .center-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+            linear-gradient(rgba(112, 217, 0, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(112, 217, 0, 0.025) 1px, transparent 1px);
+        background-size: 2.5rem 2.5rem;
+        opacity: 0.55;
+    }
+	.match-layout::before {
         content: "";
         position: absolute;
         inset: 0;
@@ -768,7 +775,6 @@
 
     .hand-zone {
         --hand-card-width: min(124px, calc((100% - 4.5rem) / 7));
-
         display: flex;
         align-items: center;
         justify-content: center;
@@ -776,13 +782,12 @@
         width: 100%;
         min-height: 0;
         padding: clamp(0.65rem, 1.5vw, 1.25rem);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background:
-            linear-gradient(180deg, rgba(6, 10, 16, 0.66), rgba(3, 6, 10, 0.86));
+
+
     }
 
     .hand-zone button {
-        flex: 0 1 var(--hand-card-width);
+        flex: 1;
         container-type: size;
         display: grid;
         place-items: center;

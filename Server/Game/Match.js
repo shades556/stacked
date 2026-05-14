@@ -509,6 +509,21 @@ export class Match {
         ]
     }
 
+
+    powerModifiersForLocations(location) {
+        const ongoing = this.ongoingModifiers()
+            .filter(modifier =>
+                modifier.type === 'LOCATION_POWER_MODIFIER' &&
+                String(modifier.target?.instanceId) === String(location.instanceId)
+            )
+            .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
+
+        return [
+            ...this.storedPowerModifiers(location),
+            ...ongoing
+        ]
+    }
+
     cardPowerBreakdown(card) {
         const modifiers = this.powerModifiersForCard(card)
         const modifierPower = modifiers.reduce((sum, modifier) => sum + modifier.power, 0)

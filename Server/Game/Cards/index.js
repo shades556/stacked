@@ -1,10 +1,12 @@
 import { Card } from './Card.js'
 import { DockerCard } from './DockerCard.js'
 import { JavaScriptCard } from './JavascriptCard.js'
+import { WifiCard } from './WifiCard.js'
 
 const registry = {
     docker: DockerCard,
-    js: JavaScriptCard
+    js: JavaScriptCard,
+    wifi: WifiCard
 }
 
 export function createCard(data) {
