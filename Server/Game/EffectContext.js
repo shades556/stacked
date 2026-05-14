@@ -13,6 +13,11 @@ export class EffectContext {
         this.events.push({ type: 'DRAW_CARD', playerId })
     }
 
+    addCard(playerId, cardId, target) {
+        this.events.push({ type: 'ADD_CARD', playerId, cardId, target })
+    }
+
+
     destroyCard(instanceId) {
         this.events.push({ type: 'DESTROY_CARD', instanceId })
     }

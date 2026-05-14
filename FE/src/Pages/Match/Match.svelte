@@ -343,7 +343,7 @@
 				End Turn
 			</Button>
 
-	<!--		{#if inspected}
+			{#if inspected}
 				<div class='inspector'>
 					<strong>{inspected.title}</strong>
 					{#if inspected.type === 'card'}
@@ -370,7 +370,7 @@
 						<small>No power modifiers</small>
 					{/if}
 				</div>
-			{/if}-->
+			{/if}
 		</div>
 	</div>
 </div>

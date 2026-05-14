@@ -60,6 +60,11 @@ export class Match {
         return this.cards.find(card => card.instanceId === instanceId)
     }
 
+    getLocation(locationId) {
+
+        return this.locations.find(lock => lock.id === locationId)
+    }
+
     cardsForPlayer(playerId, zone) {
         return this.cards.filter(card =>
             String(card.ownerId) === String(playerId) &&
@@ -109,10 +114,10 @@ export class Match {
     }
 
     start(cardDefinitions = [], locationDefinitions = []) {
-        if (!Array.isArray(cardDefinitions) || cardDefinitions.length === 0) {
+        if ( ! Array.isArray(cardDefinitions) || cardDefinitions.length === 0) {
             throw new Error('Cannot start match without card definitions')
         }
-        if (!Array.isArray(locationDefinitions) || locationDefinitions.length === 0) {
+        if ( ! Array.isArray(locationDefinitions) || locationDefinitions.length === 0) {
             throw new Error('Cannot start match without location definitions')
         }
 
@@ -169,9 +174,9 @@ export class Match {
         }
 
         const player = this.getPlayer(playerId)
-        if (!player) throw new Error('Player not found')
+        if ( ! player) throw new Error('Player not found')
         if (player.lockedIn) throw new Error('Already ended turn')
-        if (!Array.isArray(plays)) throw new Error('Invalid plays')
+        if ( ! Array.isArray(plays)) throw new Error('Invalid plays')
 
         const usedIds = new Set()
         let energyCost = 0
@@ -180,7 +185,7 @@ export class Match {
             const card = this.getCard(String(play.instanceId))
             const locationId = String(play.locationId)
 
-            if (!card || String(card.ownerId) !== String(playerId) || card.zone !== CARD_ZONE.HAND) {
+            if ( ! card || String(card.ownerId) !== String(playerId) || card.zone !== CARD_ZONE.HAND) {
                 throw new Error('Card not in hand')
             }
 
@@ -189,16 +194,16 @@ export class Match {
             }
 
             const location = this.locationFor(locationId)
-            if (!location) throw new Error('Location not found')
+            if ( ! location) throw new Error('Location not found')
 
             if (location.revealed) {
                 const ctx = new EffectContext(this, location)
-                if (!location.canPlayCard(ctx, card)) {
+                if ( ! location.canPlayCard(ctx, card)) {
                     throw new Error('Cannot play card here')
                 }
             }
 
-            if (!this.canCardMoveTo(card, locationId, [CARD_ZONE.BOARD, CARD_ZONE.PENDING])) {
+            if ( ! this.canCardMoveTo(card, locationId, [CARD_ZONE.BOARD, CARD_ZONE.PENDING])) {
                 throw new Error('Location full')
             }
 
@@ -253,13 +258,13 @@ export class Match {
 
     revealNext() {
         const instanceId = this.revealQueue.shift()
-        if (!instanceId) {
+        if ( ! instanceId) {
             this.finishTurn()
             return null
         }
 
         const card = this.getCard(instanceId)
-        if (!card) return null
+        if ( ! card) return null
 
         card.zone = CARD_ZONE.BOARD
         card.revealed = true
@@ -272,6 +277,7 @@ export class Match {
         }
 
         const cardCtx = new EffectContext(this, card)
+        console.log('cardCtx', cardCtx)
         card.onReveal(cardCtx)
         this.applyEvents(cardCtx.events)
 
@@ -292,9 +298,13 @@ export class Match {
     }
 
     applyEvent(event) {
+        console.log('applyEvent', event)
         switch (event.type) {
             case 'DRAW_CARD':
                 this.drawCard(event.playerId)
+                break
+            case 'ADD_CARD':
+                this.addCard(event.playerId, event.card, event.target)
                 break
             case 'DESTROY_CARD':
                 this.destroyCard(event.instanceId)
@@ -307,6 +317,9 @@ export class Match {
                 break
             case 'ADD_POWER':
                 this.addPower(event.instanceId, event.power, event.sourceId)
+                break
+            case 'ADD_LOCATION_POWER':
+                this.addLocationPower(event.instanceId, event.power, event.sourceId)
                 break
             default:
                 this.log.push(event)
@@ -325,9 +338,34 @@ export class Match {
         }
     }
 
+    addCard(playerId, cardId,  locationType) {
+
+        switch (locationType) {
+            case 'right_location':
+                break
+            
+
+
+            default:
+
+
+        }
+
+        const hand = this.cardsForPlayer(playerId, CARD_ZONE.HAND)
+        if (hand.length >= MAX_HAND_SIZE) return
+
+        const next = this.cardsForPlayer(playerId, CARD_ZONE.DECK)
+            .sort((a, b) => (a.playOrder ?? 0) - (b.playOrder ?? 0))[0]
+
+        if (next) {
+            next.zone = CARD_ZONE.HAND
+        }
+    }
+
+
     destroyCard(instanceId) {
         const card = this.getCard(instanceId)
-        if (!card) return
+        if ( ! card) return
 
         card.zone = CARD_ZONE.DESTROYED
         card.locationId = null
@@ -336,9 +374,9 @@ export class Match {
 
     moveCard(instanceId, locationId) {
         const card = this.getCard(instanceId)
-        if (!card) return
-        if (!this.locationFor(locationId)) return
-        if (!this.canCardMoveTo(card, locationId, [
+        if ( ! card) return
+        if ( ! this.locationFor(locationId)) return
+        if ( ! this.canCardMoveTo(card, locationId, [
             CARD_ZONE.BOARD,
             CARD_ZONE.PENDING
         ])) return
@@ -348,13 +386,25 @@ export class Match {
 
     addPower(instanceId, power, sourceId = null) {
         const card = this.getCard(instanceId)
-        if (!card) return
-
+        if ( ! card) return
+        console.log('Add power##')
         card.modifiers.push({
             power,
             sourceId,
             label: 'Added power',
-            description: `${power > 0 ? '+' : ''}${power} power`
+            description: `${ power > 0 ? '+' : '' }${ power } power`
+        })
+    }
+
+    addLocationPower(instanceId, power, sourceId = null) {
+        const location = this.getLocation(instanceId)
+        if ( ! location) return
+        console.log('Add power## location')
+        location.modifiers.push({
+            power,
+            sourceId,
+            label: 'Added power',
+            description: `${ power > 0 ? '+' : '' }${ power } power`
         })
     }
 
@@ -403,7 +453,7 @@ export class Match {
 
     setLocationOrder(locationIds) {
         const knownIds = new Set(this.locations.map(location => location.id))
-        if (!Array.isArray(locationIds) || locationIds.some(id => !knownIds.has(String(id)))) {
+        if ( ! Array.isArray(locationIds) || locationIds.some(id => ! knownIds.has(String(id)))) {
             throw new Error('Invalid location order')
         }
 
@@ -427,7 +477,7 @@ export class Match {
 
     revealLocation(locationId) {
         const location = this.locationFor(locationId)
-        if (!location || location.revealed) return null
+        if ( ! location || location.revealed) return null
 
         location.revealed = true
 
@@ -440,13 +490,13 @@ export class Match {
 
     revealLocationForTurn(turn) {
         const location = this.orderedLocations()[turn - 1]
-        if (!location) return null
+        if ( ! location) return null
 
         return this.revealLocation(location.id)
     }
 
     modifierSource(sourceId) {
-        if (!sourceId) return null
+        if ( ! sourceId) return null
 
         const card = this.getCard(sourceId)
         if (card) {
@@ -488,12 +538,22 @@ export class Match {
     }
 
     storedPowerModifiers(card) {
+        console.log('storedPowerModifiers CARD###', card)
         return card.modifiers.map(modifier => this.normalizeModifier({
             type: 'POWER_MODIFIER',
             target: { instanceId: card.instanceId },
             ...modifier
         }, modifier.sourceId))
     }
+
+    storedLocationPowerModifiers(location) {
+        return location.modifiers.map(modifier => this.normalizeModifier({
+            type: 'LOCATION_POWER_MODIFIER',
+            target: { instanceId: modifier.instanceId },
+            ...modifier
+        }, modifier.sourceId))
+    }
+
 
     powerModifiersForCard(card) {
         const ongoing = this.ongoingModifiers()
@@ -502,30 +562,66 @@ export class Match {
                 String(modifier.target?.instanceId) === String(card.instanceId)
             )
             .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
+        console.log('CARD##', card)
+        console.log('ongoing##', ongoing)
 
+        let stored = this.storedPowerModifiers(card)
+        console.log('stored', stored )
         return [
-            ...this.storedPowerModifiers(card),
+            ...stored,
             ...ongoing
         ]
     }
 
+    getLocationTargets(location, modifier, playerId) {
+        switch (modifier.target) {
+            case 'near_locations': {
+                const sourceCard = this.getCard(modifier.sourceId);
+                if (!sourceCard) return false;
 
-    powerModifiersForLocations(location) {
-        const ongoing = this.ongoingModifiers()
-            .filter(modifier =>
-                modifier.type === 'LOCATION_POWER_MODIFIER' &&
-                String(modifier.target?.instanceId) === String(location.instanceId)
-            )
-            .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
+                // Only affect the owner's side
+                if (String(sourceCard.ownerId) !== String(playerId)) {
+                    return false;
+                }
 
-        return [
-            ...this.storedPowerModifiers(location),
-            ...ongoing
-        ]
+                const sourceLocation = this.locationFor(sourceCard.locationId);
+                if (!sourceLocation) return false;
+
+                // Nearby = exactly one position away
+                return Math.abs(location.order - sourceLocation.order) === 1;
+            }
+
+            default:
+                return String(modifier.target?.instanceId) === String(location.id);
+        }
+    }
+
+    powerModifiersForLocations(location, playerId) {
+        try {
+            const ongoing = this.ongoingModifiers()
+                .filter(modifier => {
+                        return modifier.type === 'LOCATION_POWER_MODIFIER'
+                            && this.getLocationTargets(location, modifier, playerId)
+                    }
+                )
+                .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
+            console.log('ongoing RAW', ongoing)
+            console.log('ongoing stored', this.storedLocationPowerModifiers(location))
+
+            return [
+                ...this.storedLocationPowerModifiers(location),
+                ...ongoing
+            ]
+        } catch (err) {
+            console.error(err)
+        }
+
+
     }
 
     cardPowerBreakdown(card) {
         const modifiers = this.powerModifiersForCard(card)
+        console.log('card MODI', modifiers)
         const modifierPower = modifiers.reduce((sum, modifier) => sum + modifier.power, 0)
 
         return {
@@ -536,14 +632,26 @@ export class Match {
     }
 
     locationPowerBreakdown(playerId, locationId) {
+
         const cards = this.cardsAt(playerId, locationId).map(card => ({
             instanceId: card.instanceId,
             title: card.title,
             power: this.cardPowerBreakdown(card)
         }))
-        const total = cards.reduce((sum, card) => sum + card.power.total, 0)
+        let location = this.getLocation(locationId)
+
+        const locationModifier = this.powerModifiersForLocations(location, playerId)
+        console.log('oke##', locationModifier)
+
+        const modifierPower = locationModifier.reduce((sum, modifier) => sum + modifier.power, 0)
+
+
+        const base = cards.reduce((sum, card) => sum + card.power.total, 0)
+        const total = cards.reduce((sum, card) => sum + card.power.total, 0) + modifierPower
 
         return {
+            basePower: base,
+            modifiers: locationModifier,
             total,
             cards
         }
@@ -569,7 +677,7 @@ export class Match {
         this.priorityPlayer = this.players[1]?.player_id ?? this.players[0]?.player_id ?? null
         this.revealQueue = []
 
-        if (!ended) {
+        if ( ! ended) {
             this.revealLocationForTurn(nextTurn)
         }
     }
@@ -594,7 +702,7 @@ export class Match {
                 retreated: opponent.retreated,
                 handCount: this.cardsForPlayer(opponent.player_id, CARD_ZONE.HAND).length,
                 pendingCount: this.cardsForPlayer(opponent.player_id, CARD_ZONE.PENDING).length,
-                lockedIn: !!opponent.lockedIn
+                lockedIn: !! opponent.lockedIn
             } : null,
             board: this.orderedLocations().map(location => ({
                 id: location.id,
@@ -611,7 +719,7 @@ export class Match {
                     me: me ? [
                         ...this.cardsAt(me.player_id, location.id).map(card => this.cardView(card)),
                         ...this.pendingAt(me.player_id, location.id).map(card => ({
-                            instanceId: `queued-me-${location.id}-${card.playOrder}`,
+                            instanceId: `queued-me-${ location.id }-${ card.playOrder }`,
                             hidden: true,
                             pending: true,
                             state: 'queued'
@@ -621,7 +729,7 @@ export class Match {
                         ...this.cardsAt(opponent.player_id, location.id).map(card => this.cardView(card)),
                         ...(canSeeOpponentPendingLocations
                             ? this.pendingAt(opponent.player_id, location.id).map(card => ({
-                                instanceId: `queued-opponent-${location.id}-${card.playOrder}`,
+                                instanceId: `queued-opponent-${ location.id }-${ card.playOrder }`,
                                 hidden: true,
                                 pending: true,
                                 state: 'queued'
@@ -640,7 +748,7 @@ export class Match {
             energy: player.energy,
             snapped: player.snapped,
             retreated: player.retreated,
-            lockedIn: !!player.lockedIn,
+            lockedIn: !! player.lockedIn,
             hand: this.cardsForPlayer(player.player_id, CARD_ZONE.HAND).map(card => this.cardView(card)),
             pendingPlays: this.cardsForPlayer(player.player_id, CARD_ZONE.PENDING).map(card => ({
                 instanceId: card.instanceId,

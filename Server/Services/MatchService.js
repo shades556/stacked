@@ -11,6 +11,7 @@ export class MatchService {
 
     async find(match_id) {
         const data = await this.model.findOne({ match_id }).lean()
+        console.log('data', data)
         return data ? Match.fromData(data) : null
     }
 

@@ -9,6 +9,7 @@ export class Location {
         this.effects = data.effects ?? []
         this.order = data.order ?? 0
         this.match = match
+        this.modifiers = data.modifiers ?? []
     }
 
     cards(playerId) {
@@ -51,7 +52,8 @@ export class Location {
             revealed: this.revealed,
             effect: this.effect,
             effects: this.effects,
-            order: this.order
+            order: this.order,
+            modifiers: this.modifiers
         }
     }
 }
