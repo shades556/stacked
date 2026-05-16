@@ -20,6 +20,7 @@ export class Card {
         this.revealed = data.revealed ?? false
         this.playOrder = data.playOrder ?? null
         this.modifiers = data.modifiers ?? []
+        this.createdBy = data.createdBy ?? null
     }
 
     get power() {
@@ -60,7 +61,8 @@ export class Card {
             locationId: this.locationId,
             revealed: this.revealed,
             playOrder: this.playOrder,
-            modifiers: this.modifiers
+            modifiers: this.modifiers,
+            createdBy: this.createdBy
         }
     }
 
@@ -80,6 +82,7 @@ export class Card {
             backgroundCss: this.backgroundCss,
             rarity: this.rarity,
             revealed: this.revealed,
+            createdBy: this.createdBy,
             ...extra
         }
     }

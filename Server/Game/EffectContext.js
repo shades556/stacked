@@ -13,8 +13,18 @@ export class EffectContext {
         this.events.push({ type: 'DRAW_CARD', playerId })
     }
 
-    addCard(playerId, cardId, target) {
-        this.events.push({ type: 'ADD_CARD', playerId, cardId, target })
+    addCard(instanceId, locationId) {
+        this.events.push({ type: 'ADD_CARD', instanceId, locationId })
+    }
+
+    createCard(cardId, locationId, ownerId) {
+        this.events.push({
+            type: 'CREATE_CARD',
+            cardId,
+            locationId,
+            ownerId,
+            sourceId: this.sourceId
+        })
     }
 
 

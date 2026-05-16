@@ -122,10 +122,43 @@ const DEFAULT_CARD_DEFINITIONS = Object.freeze([
         text: '',
         rarity: 'common',
         sortOrder: 120
+    },
+    {
+        cardId: 'recursion',
+        behaviorKey: 'recursion',
+        title: 'Recursion',
+        basePower: 2,
+        cost: 3,
+        text: 'Ongoing: Your On Reveal abilities at this location trigger an additional time.',
+        effects: [
+            { trigger: 'ongoing', type: 'REVEAL_MULTIPLIER', target: 'location', multiplier: 2 }
+        ],
+        borderColor: '#70d900',
+        backgroundCss: 'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)',
+        logoText: '$',
+        rarity: 'common',
+        sortOrder: 160
+    },
+    {
+        cardId: 'hallucination',
+        behaviorKey: 'hallucination',
+        title: 'hallucination',
+        basePower: -10,
+        cost: 3,
+        text: '',
+        effects: [],
+        borderColor: '#70d900',
+        backgroundCss: 'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)',
+        logoText: 'hallucination',
+        rarity: 'common',
+        deckable: false,
+        sortOrder: 150
     }
 ])
 
 function normalizeCardDefinition(card) {
+    const tags = card.tags ?? []
+
     return {
         cardId: card.cardId,
         behaviorKey: card.behaviorKey ?? card.cardId,
@@ -140,8 +173,13 @@ function normalizeCardDefinition(card) {
         borderColor: card.borderColor ?? '#70d900',
         backgroundCss: card.backgroundCss ?? '',
         rarity: card.rarity ?? 'common',
-        tags: card.tags ?? [],
+        tags,
         enabled: card.enabled ?? true,
+        deckable: card.deckable ?? (
+            card.cardId !== 'hallucination' &&
+            ! tags.includes('token') &&
+            ! tags.includes('generated')
+        ),
         sortOrder: card.sortOrder ?? 0
     }
 }
@@ -166,6 +204,7 @@ const schema = new mongoose.Schema({
     rarity: { type: String, default: 'common' },
     tags: { type: [String], default: [] },
     enabled: { type: Boolean, default: true },
+    deckable: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 }
 }, {
     timestamps: true,

@@ -47,7 +47,8 @@ const CardSchema = new mongoose.Schema({
     locationId: { type: String, default: null },
     revealed: { type: Boolean, default: false },
     playOrder: { type: Number, default: null },
-    modifiers: { type: [mongoose.Schema.Types.Mixed], default: [] }
+    modifiers: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    createdBy: { type: String, default: null }
 }, schemaOptions)
 
 const MatchSchema = new mongoose.Schema({
@@ -69,6 +70,7 @@ const MatchSchema = new mongoose.Schema({
     players: { type: [PlayerSchema], default: [] },
     locations: { type: [LocationSchema], default: [] },
     cards: { type: [CardSchema], default: [] },
+    cardDefinitions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     revealQueue: { type: [String], default: [] },
     log: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, {

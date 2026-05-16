@@ -40,6 +40,7 @@ export class Match {
         this.players = data.players ?? []
         this.locations = (data.locations ?? []).map(location => createLocation(location, this))
         this.cards = (data.cards ?? []).map(card => createCard(card))
+        this.cardDefinitions = data.cardDefinitions ?? []
         this.revealQueue = data.revealQueue ?? []
         this.log = data.log ?? []
     }
@@ -59,10 +60,16 @@ export class Match {
     getCard(instanceId) {
         return this.cards.find(card => card.instanceId === instanceId)
     }
+    getCardById(cardId) {
+        return this.cards.find(card => card.cardId === cardId)
+    }
 
     getLocation(locationId) {
-
         return this.locations.find(lock => lock.id === locationId)
+    }
+
+    getRightLocation() {
+        return this.locations.find(lock => lock.order === 2)
     }
 
     cardsForPlayer(playerId, zone) {
@@ -122,6 +129,7 @@ export class Match {
         }
 
         this.cards = []
+        this.cardDefinitions = cardDefinitions
         this.locations = locationDefinitions.map((definition, index) => createLocation({
             id: String(index + 1),
             locationId: definition.locationId,
@@ -133,8 +141,10 @@ export class Match {
             order: index
         }, this))
 
+        const deckDefinitions = cardDefinitions.filter(definition => definition.deckable !== false)
+
         for (const player of this.players) {
-            const deck = shuffle(cardDefinitions).map((definition, index) => createCard({
+            const deck = shuffle(deckDefinitions).map((definition, index) => createCard({
                 instanceId: randomUUID(),
                 cardId: definition.cardId,
                 behaviorKey: definition.behaviorKey ?? definition.cardId,
@@ -276,10 +286,12 @@ export class Match {
             this.applyEvents(beforeCtx.events)
         }
 
-        const cardCtx = new EffectContext(this, card)
-        console.log('cardCtx', cardCtx)
-        card.onReveal(cardCtx)
-        this.applyEvents(cardCtx.events)
+        const onRevealTriggers = this.onRevealTriggerCount(card)
+        for (let i = 0; i < onRevealTriggers; i++) {
+            const cardCtx = new EffectContext(this, card)
+            card.onReveal(cardCtx)
+            this.applyEvents(cardCtx.events)
+        }
 
         const afterLocation = this.locationFor(card.locationId)
         if (afterLocation?.revealed) {
@@ -304,7 +316,10 @@ export class Match {
                 this.drawCard(event.playerId)
                 break
             case 'ADD_CARD':
-                this.addCard(event.playerId, event.card, event.target)
+                this.addCard(event.instanceId, event.locationId)
+                break
+            case 'CREATE_CARD':
+                this.createCardAt(event.cardId, event.ownerId, event.locationId, event.sourceId)
                 break
             case 'DESTROY_CARD':
                 this.destroyCard(event.instanceId)
@@ -338,28 +353,77 @@ export class Match {
         }
     }
 
-    addCard(playerId, cardId,  locationType) {
+    addCard(instanceId, locationId) {
+        const card = this.getCard(instanceId)
+        console.log(card)
+        if ( ! card) return
+        if ( ! this.locationFor(locationId)) return
+        if ( ! this.canCardMoveTo(card, locationId, [
+            CARD_ZONE.BOARD,
+            CARD_ZONE.PENDING
+        ])) return
 
-        switch (locationType) {
-            case 'right_location':
-                break
-            
+        card.locationId = String(locationId)
+        card.zone = CARD_ZONE.BOARD
+        card.revealed = true
+    }
 
+    cardTemplateFor(cardId, ownerId = null) {
+        return this.cardDefinitions.find(definition => definition.cardId === cardId)
+            ?? this.cards.find(card =>
+            card.cardId === cardId &&
+            String(card.ownerId) === String(ownerId)
+        ) ?? this.cards.find(card => card.cardId === cardId)
+    }
 
-            default:
+    cardDataFromTemplate(template) {
+        return {
+            cardId: template.cardId,
+            behaviorKey: template.behaviorKey,
+            title: template.title,
+            basePower: template.basePower,
+            cost: template.cost,
+            text: template.text,
+            effects: template.effects,
+            artUrl: template.artUrl,
+            logoUrl: template.logoUrl,
+            logoText: template.logoText,
+            borderColor: template.borderColor,
+            backgroundCss: template.backgroundCss,
+            rarity: template.rarity
+        }
+    }
 
+    createCardAt(cardId, ownerId, locationId, sourceId = null) {
+        const location = this.locationFor(locationId)
+        const template = this.cardTemplateFor(cardId, ownerId)
+        if ( ! location || ! template || ! ownerId) return null
 
+        const instanceId = randomUUID()
+        const ownerCard = {
+            instanceId,
+            ownerId: String(ownerId)
         }
 
-        const hand = this.cardsForPlayer(playerId, CARD_ZONE.HAND)
-        if (hand.length >= MAX_HAND_SIZE) return
+        if ( ! this.canCardMoveTo(ownerCard, location.id, [
+            CARD_ZONE.BOARD,
+            CARD_ZONE.PENDING
+        ])) return null
 
-        const next = this.cardsForPlayer(playerId, CARD_ZONE.DECK)
-            .sort((a, b) => (a.playOrder ?? 0) - (b.playOrder ?? 0))[0]
+        const card = createCard({
+            ...this.cardDataFromTemplate(template),
+            instanceId,
+            ownerId: String(ownerId),
+            zone: CARD_ZONE.BOARD,
+            locationId: String(location.id),
+            revealed: true,
+            playOrder: this.cards.length,
+            modifiers: [],
+            createdBy: sourceId
+        })
 
-        if (next) {
-            next.zone = CARD_ZONE.HAND
-        }
+        this.cards.push(card)
+        return card
     }
 
 
@@ -387,7 +451,6 @@ export class Match {
     addPower(instanceId, power, sourceId = null) {
         const card = this.getCard(instanceId)
         if ( ! card) return
-        console.log('Add power##')
         card.modifiers.push({
             power,
             sourceId,
@@ -399,7 +462,6 @@ export class Match {
     addLocationPower(instanceId, power, sourceId = null) {
         const location = this.getLocation(instanceId)
         if ( ! location) return
-        console.log('Add power## location')
         location.modifiers.push({
             power,
             sourceId,
@@ -428,6 +490,32 @@ export class Match {
         })
 
         return [...cardModifiers, ...locationModifiers]
+    }
+
+    revealMultiplierAppliesToCard(card, modifier) {
+        const target = modifier.target
+        if ( ! target || typeof target !== 'object') return false
+
+        const locationId = target.locationId ?? target.instanceId
+        if (locationId && String(locationId) !== String(card.locationId)) return false
+
+        if (target.ownerId && String(target.ownerId) !== String(card.ownerId)) return false
+
+        return !! locationId || !! target.ownerId
+    }
+
+    onRevealTriggerCount(card) {
+        return this.ongoingModifiers()
+            .filter(modifier =>
+                modifier.type === 'REVEAL_MULTIPLIER' &&
+                this.revealMultiplierAppliesToCard(card, modifier)
+            )
+            .reduce((count, modifier) => {
+                const multiplier = Math.floor(Number(modifier.multiplier ?? 1))
+                return Number.isFinite(multiplier) && multiplier > 0
+                    ? count * multiplier
+                    : count
+            }, 1)
     }
 
     locationFor(locationId) {
@@ -538,7 +626,6 @@ export class Match {
     }
 
     storedPowerModifiers(card) {
-        console.log('storedPowerModifiers CARD###', card)
         return card.modifiers.map(modifier => this.normalizeModifier({
             type: 'POWER_MODIFIER',
             target: { instanceId: card.instanceId },
@@ -562,11 +649,10 @@ export class Match {
                 String(modifier.target?.instanceId) === String(card.instanceId)
             )
             .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
-        console.log('CARD##', card)
-        console.log('ongoing##', ongoing)
+
 
         let stored = this.storedPowerModifiers(card)
-        console.log('stored', stored )
+
         return [
             ...stored,
             ...ongoing
@@ -605,8 +691,7 @@ export class Match {
                     }
                 )
                 .map(modifier => this.normalizeModifier(modifier, modifier.sourceId))
-            console.log('ongoing RAW', ongoing)
-            console.log('ongoing stored', this.storedLocationPowerModifiers(location))
+
 
             return [
                 ...this.storedLocationPowerModifiers(location),
@@ -621,7 +706,6 @@ export class Match {
 
     cardPowerBreakdown(card) {
         const modifiers = this.powerModifiersForCard(card)
-        console.log('card MODI', modifiers)
         const modifierPower = modifiers.reduce((sum, modifier) => sum + modifier.power, 0)
 
         return {
@@ -641,7 +725,7 @@ export class Match {
         let location = this.getLocation(locationId)
 
         const locationModifier = this.powerModifiersForLocations(location, playerId)
-        console.log('oke##', locationModifier)
+
 
         const modifierPower = locationModifier.reduce((sum, modifier) => sum + modifier.power, 0)
 
@@ -780,6 +864,7 @@ export class Match {
             players: this.players,
             locations: this.locations.map(location => location.toData()),
             cards: this.cards.map(card => card.toData()),
+            cardDefinitions: this.cardDefinitions,
             revealQueue: this.revealQueue,
             log: this.log
         }
