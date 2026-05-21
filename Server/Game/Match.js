@@ -422,7 +422,7 @@ export class Match {
             createdBy: sourceId
         })
 
-        this.cards.push(card)
+        this.cards.npush(card)
         return card
     }
 

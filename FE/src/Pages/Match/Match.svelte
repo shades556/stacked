@@ -4,10 +4,8 @@
     import { matchState } from './MatchState.svelte.js'
     import { connectionState } from '../../Socket.svelte.js'
     import { player } from '../Player.svelte.js'
-    import Avatar from '$lib/user/Avatar.svelte'
     import { Button } from '$lib/components/ui/button/index.js'
-
-	import { onMount } from 'svelte'
+    import { onMount } from 'svelte'
 
     let matchId = ''
 
@@ -18,15 +16,12 @@
     let inspected = $state(null)
     let detailedCard = $state(null)
 
-    let { route  } = $props()
+    let { route } = $props()
 
-	onMount(async () => {
+    onMount(async () => {
         matchId = route.result.querystring.params.id
         await matchState.joinGame(matchId)
-	})
-
-	$inspect('route', route)
-
+    })
 
     const game = $derived(matchState.game)
     const me = $derived(game?.me ?? null)
@@ -34,6 +29,7 @@
     const stagedCardIds = $derived(new Set(stagedPlays.map(play => play.card.instanceId)))
     const stagedEnergy = $derived(stagedPlays.reduce((sum, play) => sum + play.card.cost, 0))
     const availableEnergy = $derived((me?.energy ?? 0) - stagedEnergy)
+
     const board = $derived((game?.board ?? []).map(location => ({
         ...location,
         slots: {
@@ -50,7 +46,8 @@
             ]
         }
     })))
-    const myHand = $derived((game?.me?.hand ?? []).filter(card => ! stagedCardIds.has(card.instanceId)))
+
+    const myHand = $derived((game?.me?.hand ?? []).filter(card => !stagedCardIds.has(card.instanceId)))
 
     const selectCard = (card) => {
         if (card?.hidden) return
@@ -60,7 +57,7 @@
     }
 
     const addCard = (locationId) => {
-        if ( ! selected) return
+        if (!selected) return
         if (me?.lockedIn) return
         if (game?.phase !== 'play') return
         if (selected.cost > availableEnergy) return
@@ -126,14 +123,14 @@
         const locationModifierRows = (cards, ownerLabel) => {
             return cards.flatMap(card => [
                 {
-                    label: `${ card.title } base`,
+                    label: `${card.title} base`,
                     power: card.power.basePower,
                     source: { name: ownerLabel },
                     description: 'Base card power'
                 },
                 ...card.power.modifiers.map(modifier => ({
                     ...modifier,
-                    label: `${ card.title }: ${ modifier.label }`,
+                    label: `${card.title}: ${modifier.label}`,
                     source: modifier.source ?? { name: ownerLabel }
                 }))
             ])
@@ -148,10 +145,6 @@
                 ...locationModifierRows(location.power?.opponent?.cards ?? [], 'Opponent board')
             ]
         }
-    }
-
-    const locationClick = (location) => {
-        inspectLocation(location)
     }
 
     const endTurn = async () => {
@@ -174,6 +167,26 @@
         return card?.hidden === true
     }
 
+    const removeStagedPlay = (instanceId) => {
+        stagedPlays = stagedPlays.filter(play => play.card.instanceId !== instanceId)
+    }
+
+    const phaseLabel = $derived(
+        game?.phase === 'reveal'
+            ? 'REVEAL SEQUENCE'
+            : me?.lockedIn
+                ? 'TURN LOCKED'
+                : 'TACTICAL DEPLOYMENT'
+    )
+
+    const opponentStatus = $derived(
+        game?.phase === 'reveal'
+            ? 'Revealing...'
+            : opponent?.lockedIn
+                ? 'Opponent ended turn'
+                : 'Opponent thinking...'
+    )
+
     $effect(() => {
         if (game?.phase !== 'play' || me?.lockedIn) {
             stagedPlays = []
@@ -182,187 +195,369 @@
     })
 </script>
 
-<div class='match-layout p-6 '>
-	<div class='player-rail player-rail--me'>
-		<div class='rail-content rail-content--me'>
+<div class="match-hud">
+	<div class="hud-noise"></div>
+	<div class="hud-vignette"></div>
+	<div class="hud-scanline"></div>
+	<div class="hud-grid"></div>
+	<div class="hud-crosshair hud-crosshair--a"></div>
+	<div class="hud-crosshair hud-crosshair--b"></div>
 
-			<Button class='player-chip'>
-				{me?.username ?? 'Me'}
+	<div class="match-layout">
+		<aside class="player-rail player-rail--me">
+			<div class="hud-tag">LOCAL PILOT</div>
 
-			</Button>
+			<div class="rail-panel rail-panel--player">
+				<div class="rail-panel__header">
+					<span>PLAYER NODE</span>
+					<small>LINK ACTIVE</small>
+				</div>
 
-			<div class='energy-panel'>
-				<span>Energy</span>
-				<strong>{availableEnergy}</strong>
+				<Button class="player-chip player-chip--me">
+					{me?.username ?? 'Me'}
+				</Button>
+
+				<div class="identity-lines">
+					<div><span>ID</span><strong>{player.player_id ?? '---'}</strong></div>
+					<div><span>MATCH</span><strong>{matchId || '----'}</strong></div>
+				</div>
 			</div>
 
-			<Button size='lg' class='action-button retreat-button'
-			        variant='destructive'>
+			<div class="rail-panel rail-panel--energy">
+				<div class="panel-title">ENERGY CELL</div>
+				<div class="energy-panel">
+					<span>AVAILABLE</span>
+					<strong>{availableEnergy}</strong>
+				</div>
+				<div class="micro-stats">
+					<div><span>BASE</span><b>{me?.energy ?? 0}</b></div>
+					<div><span>STAGED</span><b>{stagedEnergy}</b></div>
+				</div>
+			</div>
+
+			<div class="rail-panel rail-panel--phase">
+				<div class="panel-title">TACTICAL STATE</div>
+				<div class="status-panel">{phaseLabel}</div>
+				<div class="phase-subline">
+					{#if selected}
+						SELECTED: {selected.title}
+					{:else}
+						NO UNIT SELECTED
+					{/if}
+				</div>
+			</div>
+
+			<Button
+					size="lg"
+					class="action-button retreat-button"
+					variant="destructive"
+			>
 				Retreat
 			</Button>
-		</div>
-	</div>
+		</aside>
 
-	<div class='center-panel'>
-		<div class='board-shell'>
-			<div class='board-grid'>
-				{#each board as b}
-					<div class='location-column'>
-						<div class='card-zone border border-dashed border-gray-500/50  card-zone--opponent'>
-							{#each b.slots.opponent as card}
-								<div class='card-slot'>
-									{#if isHiddenCard(card)}
-										<CardBack/>
-									{:else}
-										<Card
-												{card}
-												onclick={(event) => {
-													event.stopPropagation()
-													inspectCard(card)
-												}}
-												ondblclick={() => openCardDetail(card)}
-										/>
+		<main class="center-panel">
+			<div class="center-topbar">
+				<div class="topbar-block">
+					<span>SCENESCAPES</span>
+					<strong>TACTICAL MATCH INTERFACE</strong>
+				</div>
+
+				<div class="topbar-block topbar-block--center">
+					<span>PHASE</span>
+					<strong>{game?.phase?.toUpperCase?.() ?? 'INIT'}</strong>
+				</div>
+
+				<div class="topbar-actions">
+					<div class="hud-mini-btn">SCAN</div>
+					<div class="hud-mini-btn">SYNC</div>
+					<div class="hud-mini-btn">TRACE</div>
+				</div>
+			</div>
+
+			<div class="board-shell">
+				<div class="board-frame-label">TACTICAL BOARD / THREE-LANE ARRAY</div>
+
+				<div class="board-grid">
+					{#each board as b}
+						<section class="location-column">
+							<div class="column-corners"></div>
+
+				<!--			<div class="sector-header">
+								<span>SECTOR {b.id}</span>
+								<small>{b.revealed ? 'REVEALED' : 'LOCKED'}</small>
+							</div>-->
+
+							<div class="card-zone card-zone--opponent">
+								<div class="zone-label">OPPONENT DEPLOYMENT</div>
+
+								{#each b.slots.opponent as card}
+									<div class="card-slot">
+										{#if isHiddenCard(card)}
+											<CardBack />
+										{:else}
+											<Card
+													{card}
+													onclick={(event) => {
+                                                    event.stopPropagation()
+                                                    inspectCard(card)
+                                                }}
+													ondblclick={() => openCardDetail(card)}
+											/>
+										{/if}
+									</div>
+								{/each}
+							</div>
+
+							<button
+									class="location-card"
+									onclick={() => inspectLocation(b)}
+									aria-label={`Inspect ${b.name}`}
+							>
+								<div class="location-card__scan"></div>
+								<div class="location-card__power location-card__power--opponent">
+									{locationPowerTotal(b.power?.opponent)}
+								</div>
+
+								<div class="location-card__body">
+									<div class="location-card__meta">ZONE PROFILE</div>
+									<div class="location-name">{b.name}</div>
+									<div class="location-effect">
+										{b.effect}
+									</div>
+									{#if !b.revealed}
+										<div class="location-state">UNREVEALED</div>
 									{/if}
 								</div>
-							{/each}
-						</div>
 
-						<div class='location-card rounded-full border border-gray-500/50' onclick={() => locationClick(b)}>
-							<div class='location-power location-power--opponent'>{locationPowerTotal(b.power?.opponent)}</div>
-							<div class='location-name p-2'>{b.name}</div>
-							<div class='location-effect'>{b.effect}</div>
-							{#if ! b.revealed}
-								<small class='location-state'>Unrevealed</small>
-							{/if}
-							<div class='location-power location-power--me'>{locationPowerTotal(b.power?.me)}</div>
-						</div>
-
-						<div
-								class='card-zone border border-dashed border-blue-500/50 rounded  card-zone--me'
-								class:playable-zone={canPlayAt(b)}
-								onclick={() => addCard(b.id)}
-								role={canPlayAt(b) ? 'button' : undefined}
-								tabindex={canPlayAt(b) ? 0 : undefined}
-								onkeydown={(event) => {
-									if (!canPlayAt(b) || (event.key !== 'Enter' && event.key !== ' ')) return
-									event.preventDefault()
-									addCard(b.id)
-								}}
-								aria-label={canPlayAt(b) ? `Play ${selected.title} to ${b.name}` : undefined}
-						>
-							{#each b.slots.me as card}
-								<div class='card-slot'>
-									{#if isHiddenCard(card)}
-										<CardBack/>
-									{:else}
-										<Card
-												{card}
-												onclick={(event) => {
-													event.stopPropagation()
-													inspectCard(card)
-												}}
-												ondblclick={() => openCardDetail(card)}
-										/>
-									{/if}
+								<div class="location-card__power location-card__power--me">
+									{locationPowerTotal(b.power?.me)}
 								</div>
-							{/each}
-						</div>
+							</button>
+
+							<div
+									class="card-zone card-zone--me"
+									class:playable-zone={canPlayAt(b)}
+									onclick={() => addCard(b.id)}
+									role={canPlayAt(b) ? 'button' : undefined}
+									tabindex={canPlayAt(b) ? 0 : undefined}
+									onkeydown={(event) => {
+                                    if (!canPlayAt(b) || (event.key !== 'Enter' && event.key !== ' ')) return
+                                    event.preventDefault()
+                                    addCard(b.id)
+                                }}
+									aria-label={canPlayAt(b) ? `Play ${selected.title} to ${b.name}` : undefined}
+							>
+								<div class="zone-label">LOCAL DEPLOYMENT</div>
+
+								{#each b.slots.me as card}
+									<div class="card-slot">
+										{#if isHiddenCard(card)}
+											<CardBack />
+										{:else}
+											<div class:pending-card={card.pending}>
+												<Card
+														{card}
+														onclick={(event) => {
+                                                        event.stopPropagation()
+                                                        inspectCard(card)
+                                                    }}
+														ondblclick={() => openCardDetail(card)}
+														battlefield
+												/>
+
+												{#if card.pending}
+													<button
+															class="pending-remove"
+															onclick={(event) => {
+                                                            event.stopPropagation()
+                                                            removeStagedPlay(card.instanceId)
+                                                        }}
+															aria-label={`Remove ${card.title}`}
+													>
+														×
+													</button>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</section>
+					{/each}
+				</div>
+
+				<div class="hand-shell">
+					<div class="hand-shell__header">
+						<span>HAND DOCK</span>
+						<small>{myHand.length} UNITS READY</small>
 					</div>
-				{/each}
+
+					<div class="hand-zone">
+						{#each myHand as card}
+							<button
+									class="hand-card-button"
+									class:selected-card={selected?.instanceId === card.instanceId}
+									onclick={() => {
+                                    selectCard(card)
+                                    inspectCard(card)
+                                }}
+									ondblclick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    openCardDetail(card)
+                                }}
+									aria-disabled={me?.lockedIn || game?.phase !== 'play'}
+							>
+								<Card {card} />
+							</button>
+						{/each}
+					</div>
+				</div>
+			</div>
+		</main>
+
+		<aside class="player-rail player-rail--opponent">
+			<div class="hud-tag hud-tag--right">REMOTE NODE</div>
+
+			<div class="rail-panel rail-panel--player">
+				<div class="rail-panel__header">
+					<span>OPPONENT LINK</span>
+					<small>TRACKING</small>
+				</div>
+
+				<Button class="player-chip player-chip--opponent">
+					{opponent?.username ?? 'Waiting...'}
+				</Button>
+
+				<div class="identity-lines">
+					<div><span>HAND</span><strong>{opponent?.handCount ?? '--'}</strong></div>
+					<div><span>QUEUE</span><strong>{opponent?.pendingCount ?? '--'}</strong></div>
+				</div>
 			</div>
 
-			<div class='hand-zone border-blue-500/50 bg-gray-900/10 '>
-				{#each myHand as card}
-					<button class='h-full'
-							class:selected-card={selected?.instanceId === card.instanceId}
-							onclick={() => {
-								selectCard(card)
-								inspectCard(card)
-							}}
-							ondblclick={(event) => {
-								event.preventDefault()
-								event.stopPropagation()
-								openCardDetail(card)
-							}}
-							aria-disabled={me?.lockedIn || game?.phase !== 'play'}
-					>
-						<Card {card}/>
-					</button>
-				{/each}
-			</div>
-		</div>
-	</div>
-
-	<div class='player-rail player-rail--opponent'>
-		<div class='rail-content rail-content--opponent'>
-
-			<Button class='player-chip'>
-				{opponent?.username ?? 'Waiting...'}
-			</Button>
-
-
-			<!--			<div class='text-white'>
-							Hand: {opponent?.handCount ?? 0}
-						</div>
-
-						<div class='text-white'>
-							Committed: {opponent?.pendingCount ?? 0}
-						</div>-->
-
-			<div class='status-panel'>
-				{#if game?.phase === 'reveal'}
-					Revealing...
-				{:else if opponent?.lockedIn}
-					Opponent ended turn
-				{:else}
-					Opponent thinking...
-				{/if}
+			<div class="rail-panel">
+				<div class="panel-title">ENEMY STATUS</div>
+				<div class="status-panel">{opponentStatus}</div>
 			</div>
 
-
-			<div class='turn-panel'>
-				<span>Turn</span>
-				<strong>{game?.turn ?? 1}</strong>
+			<div class="rail-panel rail-panel--turn">
+				<div class="panel-title">TURN INDEX</div>
+				<div class="turn-panel">
+					<span>TURN</span>
+					<strong>{game?.turn ?? 1}</strong>
+				</div>
 			</div>
 
-			<!--			<div class='text-white'>
-							{#if game?.phase === 'reveal'}
-								Revealing...
-							{:else if me?.lockedIn}
-								Turn ended
-							{:else}
-								Choose cards
-							{/if}
-						</div>-->
-
-			<Button size='lg' class='action-button end-turn-button'
-			        variant='outline'
-			        onclick={endTurn}
-			        disabled={me?.lockedIn || game?.phase !== 'play'}
+			<Button
+					size="lg"
+					class="action-button end-turn-button"
+					variant="outline"
+					onclick={endTurn}
+					disabled={me?.lockedIn || game?.phase !== 'play'}
 			>
 				End Turn
 			</Button>
 
 			{#if inspected}
-				<div class='inspector'>
-					<strong>{inspected.title}</strong>
-					{#if inspected.type === 'card'}
-						<div>Power: {inspected.totalPower}</div>
-						<div>Base: {inspected.basePower}</div>
-					{/if}
+				<div class="inspector-panel">
+					<div class="inspector-panel__header">
+						<span>TELEMETRY INSPECTOR</span>
+						<small>{inspected.type?.toUpperCase?.() ?? 'DATA'}</small>
+					</div>
 
-					{#if inspected.type === 'location'}
-						<div>Me: {locationPowerTotal(inspected.power?.me)}</div>
-						<div>Opponent: {locationPowerTotal(inspected.power?.opponent)}</div>
-					{/if}
+					<div class="inspector">
+						<strong>{inspected.title}</strong>
 
-					{#if inspected.modifiers?.length}
+						{#if inspected.type === 'card'}
+							<div class="inspector-stats">
+								<div><span>POWER</span><b>{inspected.totalPower}</b></div>
+								<div><span>BASE</span><b>{inspected.basePower}</b></div>
+							</div>
+						{/if}
+
+						{#if inspected.type === 'location'}
+							<div class="inspector-stats">
+								<div><span>ME</span><b>{locationPowerTotal(inspected.power?.me)}</b></div>
+								<div><span>OPP</span><b>{locationPowerTotal(inspected.power?.opponent)}</b></div>
+							</div>
+						{/if}
+
+						{#if inspected.modifiers?.length}
+							<ul>
+								{#each inspected.modifiers as modifier}
+									<li>
+                                        <span class="inspector-delta">
+                                            {modifier.power > 0 ? '+' : ''}{modifier.power}
+                                        </span>
+										<span>{modifier.label}</span>
+										<small>
+											{modifier.source?.name ?? 'Unknown source'}
+											{modifier.description ? ` - ${modifier.description}` : ''}
+										</small>
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<small>No power modifiers</small>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		</aside>
+	</div>
+</div>
+
+{#if detailedCard}
+	<div
+			class="card-detail-backdrop"
+			role="button"
+			tabindex="0"
+			onclick={closeCardDetail}
+			onkeydown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                closeCardDetail()
+            }
+        }}
+	>
+		<div
+				class="card-detail"
+				role="dialog"
+				aria-modal="true"
+				aria-label={detailedCard.title}
+				onclick={(event) => event.stopPropagation()}
+		>
+			<div class="card-detail__topline">
+				<span>UNIT DETAIL VIEW</span>
+				<small>EXPANDED TELEMETRY</small>
+			</div>
+
+			<div class="card-detail__grid">
+				<div class="card-detail-stats">
+					<strong>{detailedCard.title}</strong>
+
+					<div class="card-detail-stat-row">
+						<div>
+							<span>Power</span>
+							<b>{detailedCard.totalPower}</b>
+						</div>
+						<div>
+							<span>Base</span>
+							<b>{detailedCard.basePower}</b>
+						</div>
+					</div>
+
+					{#if detailedCard.modifiers?.length}
 						<ul>
-							{#each inspected.modifiers as modifier}
+							{#each detailedCard.modifiers as modifier}
 								<li>
 									<span>{modifier.power > 0 ? '+' : ''}{modifier.power}</span>
 									<span>{modifier.label}</span>
-									<small>{modifier.source?.name ?? 'Unknown source'} {modifier.description ? `- ${ modifier.description }` : ''}</small>
+									<small>
+										{modifier.source?.name ?? 'Unknown source'}
+										{modifier.description ? ` - ${modifier.description}` : ''}
+									</small>
 								</li>
 							{/each}
 						</ul>
@@ -370,239 +565,501 @@
 						<small>No power modifiers</small>
 					{/if}
 				</div>
-			{/if}
-		</div>
-	</div>
-</div>
 
-{#if detailedCard}
-	<div
-			class='card-detail-backdrop'
-			role='button'
-			tabindex='0'
-			onclick={closeCardDetail}
-			onkeydown={(event) => {
-				if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault()
-					closeCardDetail()
-				}
-			}}
-	>
-		<div
-				class='card-detail'
-				role='dialog'
-				aria-modal='true'
-				aria-label={detailedCard.title}
-				onclick={(event) => event.stopPropagation()}
-		>
-			<div class='card-detail-stats'>
-				<strong>{detailedCard.title}</strong>
-				<div class='card-detail-stat-row'>
-					<div>
-						<span>Power</span>
-						<b>{detailedCard.totalPower}</b>
-					</div>
-					<div>
-						<span>Base</span>
-						<b>{detailedCard.basePower}</b>
-					</div>
+				<div class="card-detail-card">
+					<Card card={detailedCard.card} large holographic />
 				</div>
 
-				{#if detailedCard.modifiers?.length}
-					<ul>
-						{#each detailedCard.modifiers as modifier}
-							<li>
-								<span>{modifier.power > 0 ? '+' : ''}{modifier.power}</span>
-								<span>{modifier.label}</span>
-								<small>{modifier.source?.name ?? 'Unknown source'} {modifier.description ? `- ${ modifier.description }` : ''}</small>
-							</li>
-						{/each}
-					</ul>
-				{:else}
-					<small>No power modifiers</small>
-				{/if}
-			</div>
-
-			<Card card={detailedCard.card} large/>
-			<div class='card-detail-effect'>
-				<strong>{detailedCard.title}</strong>
-				{#if detailedCard.card.text}
-					<p>{detailedCard.card.text}</p>
-				{:else}
-					<p>No effect.</p>
-				{/if}
+				<div class="card-detail-effect">
+					<strong>Effect</strong>
+					{#if detailedCard.card.text}
+						<p>{detailedCard.card.text}</p>
+					{:else}
+						<p>No effect.</p>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
 {/if}
 
 <style>
-    .match-layout {
-        display: grid;
-        grid-template-columns: clamp(8rem, 14vw, 14rem) minmax(18rem, 1fr) clamp(8rem, 14vw, 14rem);
-        height: 100%;
-        margin-inline: auto;
-        overflow: hidden;
-        color: #f8f8f2;
+    :global(:root) {
+        --bg-0: #03060a;
+        --bg-1: #081019;
+        --bg-2: #0b1622;
+        --panel: rgba(7, 14, 24, 0.86);
+        --panel-2: rgba(10, 18, 31, 0.92);
 
+        --line: rgba(62, 144, 255, 0.24);
+        --line-strong: rgba(62, 144, 255, 0.48);
+        --line-faint: rgba(62, 144, 255, 0.09);
+
+        --text: #d8ebff;
+        --muted: #7392b4;
+
+        --blue: #39b6ff;
+        --blue-2: #64ccff;
+        --orange: #ffb156;
+        --orange-2: #ff8f2b;
+        --green: #97ff38;
+        --red: #ff6464;
+
+        --hud-font: "IBM Plex Mono", "JetBrains Mono", monospace;
+        --title-font: "Orbitron", "Rajdhani", "IBM Plex Mono", monospace;
+    }
+
+    .match-hud {
+        position: relative;
+        height: 100%;
+        min-height: 100%;
+        overflow: hidden;
+        color: var(--text);
+        background:
+                radial-gradient(circle at 50% 50%, rgba(20, 60, 110, 0.14), transparent 42%),
+                radial-gradient(circle at 20% 20%, rgba(255, 145, 40, 0.06), transparent 30%),
+                linear-gradient(180deg, #04070c, #050a10 32%, #060b11 100%);
+        font-family: var(--hud-font);
+    }
+
+    .hud-grid,
+    .hud-noise,
+    .hud-vignette,
+    .hud-scanline {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    .hud-grid {
+        background:
+                linear-gradient(rgba(45, 96, 153, 0.12) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(45, 96, 153, 0.12) 1px, transparent 1px);
+        background-size: 56px 56px;
+        opacity: 0.24;
+    }
+
+    .hud-scanline {
+        background:
+                linear-gradient(
+                        180deg,
+                        transparent 0%,
+                        rgba(80, 160, 255, 0.025) 50%,
+                        transparent 100%
+                );
+        background-size: 100% 4px;
+        opacity: 0.24;
+        mix-blend-mode: screen;
+    }
+
+    .hud-noise {
+        opacity: 0.05;
+        background-image:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.45) 0 0.5px, transparent 0.6px),
+                radial-gradient(circle at 80% 30%, rgba(255,255,255,0.35) 0 0.5px, transparent 0.6px),
+                radial-gradient(circle at 40% 75%, rgba(255,255,255,0.3) 0 0.5px, transparent 0.6px),
+                radial-gradient(circle at 70% 80%, rgba(255,255,255,0.25) 0 0.5px, transparent 0.6px);
+        background-size: 170px 170px, 230px 230px, 190px 190px, 260px 260px;
+    }
+
+    .hud-vignette {
+        background:
+                radial-gradient(circle at center, transparent 45%, rgba(0,0,0,0.34) 100%);
+    }
+
+    .hud-crosshair {
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        border: 1px solid rgba(57, 182, 255, 0.08);
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0.2;
+    }
+
+    .hud-crosshair::before,
+    .hud-crosshair::after {
+        content: "";
+        position: absolute;
+        background: rgba(57, 182, 255, 0.08);
+    }
+
+    .hud-crosshair::before {
+        left: 50%;
+        top: -22px;
+        bottom: -22px;
+        width: 1px;
+        transform: translateX(-50%);
+    }
+
+    .hud-crosshair::after {
+        top: 50%;
+        left: -22px;
+        right: -22px;
+        height: 1px;
+        transform: translateY(-50%);
+    }
+
+    .hud-crosshair--a {
+        top: 10%;
+        left: 48%;
+    }
+
+    .hud-crosshair--b {
+        bottom: 12%;
+        right: 18%;
+        width: 120px;
+        height: 120px;
+    }
+
+    .match-layout {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: clamp(12rem, 15vw, 16rem) minmax(24rem, 1fr) clamp(12rem, 15vw, 16rem);
+        gap: 1rem;
+        height: 100%;
+        padding: 0.9rem;
+        box-sizing: border-box;
+    }
+
+    .player-rail,
+    .center-panel {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    .hud-tag {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        min-height: 2rem;
+        padding: 0.2rem 0.6rem;
+        margin-bottom: 0.6rem;
+        border: 1px solid rgba(151, 255, 56, 0.45);
+        background: rgba(151, 255, 56, 0.08);
+        color: var(--green);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .hud-tag--right {
+        justify-self: end;
     }
 
     .player-rail {
-        min-width: 0;
-        height: 100%;
-
-
-    }
-
-    .rail-content {
         display: grid;
-        grid-template-rows: auto 1fr auto auto;
-        gap: 1rem;
-        width: 100%;
-        height: 100%;
-        padding: clamp(0.5rem, 1.1vw, 1rem);
+        grid-template-rows: auto 1fr;
     }
 
-    .rail-content--me {
-        justify-items: end;
+    .rail-panel {
+        position: relative;
+        border: 1px solid var(--line-strong);
+        background:
+                linear-gradient(180deg, rgba(8, 15, 25, 0.92), rgba(5, 11, 19, 0.96));
+        box-shadow:
+                inset 0 0 0 1px rgba(255,255,255,0.02),
+                0 0 18px rgba(20, 90, 170, 0.08);
+        padding: 0.7rem;
     }
 
-    .rail-content--opponent {
-        justify-items: start;
+    .player-rail--me,
+    .player-rail--opponent {
+        display: grid;
+        align-content: start;
+        gap: 0.8rem;
+    }
+
+    .rail-panel__header,
+    .panel-title,
+    .board-frame-label,
+    .hand-shell__header,
+    .inspector-panel__header,
+    .card-detail__topline,
+    .sector-header,
+    .center-topbar,
+    .topbar-block {
+        font-family: var(--hud-font);
+    }
+
+    .rail-panel__header,
+    .panel-title,
+    .hand-shell__header,
+    .inspector-panel__header,
+    .card-detail__topline,
+    .sector-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.55rem;
+        color: var(--blue);
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .rail-panel__header small,
+    .panel-title small,
+    .hand-shell__header small,
+    .inspector-panel__header small,
+    .card-detail__topline small,
+    .sector-header small {
+        color: var(--muted);
+        font-size: 0.6rem;
     }
 
     :global(.player-chip) {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        width: 100%;
+        justify-content: center;
+        border-radius: 0 !important;
+        border: 1px solid rgba(57, 182, 255, 0.45) !important;
+        background:
+                linear-gradient(180deg, rgba(18, 32, 54, 0.96), rgba(10, 18, 30, 0.96)) !important;
+        color: var(--text) !important;
+        font-family: var(--title-font);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        box-shadow: 0 0 16px rgba(57, 182, 255, 0.08);
+    }
+
+    .player-chip--me {
+        color: var(--green) !important;
+    }
+
+    .player-chip--opponent {
+        color: var(--orange) !important;
+    }
+
+    .identity-lines {
+        display: grid;
+        gap: 0.35rem;
+        margin-top: 0.75rem;
+    }
+
+    .identity-lines > div,
+    .micro-stats > div,
+    .inspector-stats > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        border-top: 1px solid rgba(57, 182, 255, 0.1);
+        padding-top: 0.35rem;
+        color: var(--text);
+        font-size: 0.72rem;
+    }
+
+    .identity-lines span,
+    .micro-stats span,
+    .inspector-stats span,
+    .phase-subline {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.62rem;
     }
 
     .energy-panel,
     .turn-panel,
     .status-panel {
         display: grid;
-        align-content: center;
-        min-width: min(100%, 5.5rem);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: #202126;
-        box-shadow: inset 0 -1px 0 rgba(112, 217, 0, 0.25);
-        color: white;
+        place-items: center;
+        min-height: 4.2rem;
+        border: 1px solid var(--line-strong);
+        background:
+                linear-gradient(180deg, rgba(9, 18, 31, 0.95), rgba(4, 9, 16, 0.95));
+        box-shadow:
+                inset 0 0 0 1px rgba(255,255,255,0.02),
+                0 0 16px rgba(57, 182, 255, 0.06);
         text-align: center;
     }
 
     .energy-panel {
-        align-self: center;
-        min-height: 3.2rem;
-        border-color: rgba(37, 99, 235, 0.7);
-        background: #2563eb;
+        border-color: rgba(77, 123, 255, 0.55);
+        background:
+                linear-gradient(180deg, rgba(48, 95, 240, 0.95), rgba(30, 61, 165, 0.95));
     }
 
     .energy-panel span,
     .turn-panel span {
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 0.65rem;
+        font-size: 0.62rem;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
+        color: rgba(255,255,255,0.78);
     }
 
     .energy-panel strong,
     .turn-panel strong {
-        font-size: 1.35rem;
-        line-height: 1.15;
+        color: white;
+        font-size: 1.8rem;
+        line-height: 1;
+        font-family: var(--title-font);
     }
 
     .status-panel {
-        align-self: center;
-        padding: 0.75rem;
-        color: #f8f8f2;
-        font-weight: 800;
+        padding: 0.7rem;
+        color: white;
+        font-size: 0.86rem;
+        font-weight: 700;
         line-height: 1.25;
     }
 
-    .turn-panel {
-        min-height: 3.2rem;
-        padding: 0.5rem;
+    .phase-subline {
+        margin-top: 0.5rem;
     }
 
     :global(.action-button) {
-        width: min(100%, 7.5rem);
+        width: 100%;
         min-height: 3rem;
+        border-radius: 0 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-family: var(--hud-font);
     }
 
     :global(.retreat-button) {
-        align-self: end;
+        border: 1px solid rgba(255, 100, 100, 0.42) !important;
+        background: rgba(87, 22, 22, 0.62) !important;
+        color: #ff7a7a !important;
     }
 
     :global(.end-turn-button) {
-        align-self: end;
+        border: 1px solid rgba(255, 177, 86, 0.42) !important;
+        background: rgba(60, 38, 14, 0.66) !important;
+        color: var(--orange) !important;
     }
 
     .center-panel {
-        position: relative;
         display: grid;
-        justify-items: center;
+        grid-template-rows: auto 1fr;
+        gap: 0.7rem;
         min-width: 0;
         min-height: 0;
-
     }
 
-    .center-panel::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
+    .center-topbar {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 0.7rem;
+        align-items: center;
+        border: 1px solid var(--line-strong);
         background:
-            linear-gradient(rgba(112, 217, 0, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(112, 217, 0, 0.025) 1px, transparent 1px);
-        background-size: 2.5rem 2.5rem;
-        opacity: 0.55;
+                linear-gradient(180deg, rgba(7, 14, 24, 0.92), rgba(5, 10, 18, 0.96));
+        padding: 0.55rem 0.7rem;
     }
-	.match-layout::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background:
-            linear-gradient(rgba(112, 217, 0, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(112, 217, 0, 0.025) 1px, transparent 1px);
-        background-size: 2.5rem 2.5rem;
-        opacity: 0.55;
+
+    .topbar-block {
+        display: grid;
+        gap: 0.15rem;
+    }
+
+    .topbar-block span {
+        color: var(--muted);
+        font-size: 0.6rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .topbar-block strong {
+        color: var(--text);
+        font-family: var(--title-font);
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .topbar-actions {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .hud-mini-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.2rem;
+        min-height: 2rem;
+        border: 1px solid rgba(57, 182, 255, 0.3);
+        background: rgba(10, 20, 34, 0.85);
+        color: var(--muted);
+        font-size: 0.65rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
     }
 
     .board-shell {
         position: relative;
-        z-index: 1;
         display: grid;
-        grid-template-rows: minmax(0, 1fr) minmax(7rem, 24%);
-        width: min(100%, 72rem);
-        height: 100%;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 0.7rem;
         min-width: 0;
         min-height: 0;
-        margin-inline: auto;
+        border: 1px solid rgba(57, 182, 255, 0.22);
+        background:
+                linear-gradient(180deg, rgba(6, 12, 20, 0.8), rgba(3, 8, 14, 0.92));
+        padding: 0.7rem;
+        box-shadow:
+                inset 0 0 0 1px rgba(255,255,255,0.02),
+                0 0 24px rgba(20, 90, 170, 0.06);
+    }
+
+    .board-frame-label {
+        color: var(--blue);
+        font-size: 0.68rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
     }
 
     .board-grid {
-        position: relative;
-        z-index: 1;
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: clamp(0.6rem, 1.1vw, 3rem);
-        width: 100%;
+        gap: 0.9rem;
         min-height: 0;
-        padding: clamp(0.5rem, 1vw, 0.9rem);
     }
 
     .location-column {
+        position: relative;
         display: grid;
-        grid-template-rows: minmax(0, 1fr) clamp(6.5rem, 18dvh, 9rem) minmax(0, 1fr);
-        gap: clamp(0.35rem, 0.9vh, 0.65rem);
+        grid-template-rows: auto minmax(0, 1fr) 8rem minmax(0, 1fr);
+        gap: 0.4rem;
         min-width: 0;
         min-height: 0;
-        height: 100%;
+        border: 1px dashed rgba(57, 182, 255, 0.22);
         background:
-            linear-gradient(180deg, rgba(1, 5, 12, 0.64), rgba(1, 5, 12, 0.42));
-        box-shadow:
-            inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-            0 14px 30px rgba(0, 0, 0, 0.18);
+                linear-gradient(180deg, rgba(4, 9, 15, 0.9), rgba(2, 6, 10, 0.95));
+        padding: 0.4rem;
+        overflow: hidden;
+    }
+
+    .column-corners::before,
+    .column-corners::after {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-color: rgba(57, 182, 255, 0.45);
+        pointer-events: none;
+    }
+
+    .column-corners::before {
+        left: 0;
+        top: 0;
+        border-left: 1px solid rgba(57, 182, 255, 0.45);
+        border-top: 1px solid rgba(57, 182, 255, 0.45);
+    }
+
+    .column-corners::after {
+        right: 0;
+        bottom: 0;
+        border-right: 1px solid rgba(57, 182, 255, 0.45);
+        border-bottom: 1px solid rgba(57, 182, 255, 0.45);
+    }
+
+    .sector-header {
+        margin-bottom: 0;
     }
 
     .card-zone {
@@ -610,69 +1067,61 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-rows: repeat(2, minmax(0, 1fr));
-        gap: clamp(0.3rem, 0.7vw, 0.6rem);
-        align-self: center;
-        justify-self: center;
-        width: 100%;
-        height: 100%;
-        max-width: 100%;
+        gap: 0.5rem;
         min-height: 0;
-        padding: clamp(0.35rem, 0.8vw, 0.65rem);
-        box-sizing: border-box;
-
+        padding: 1.15rem 0.55rem 0.55rem;
+        border: 1px dashed rgba(57, 182, 255, 0.35);
         background:
-            linear-gradient(180deg, rgba(6, 10, 16, 0.45), rgba(0, 0, 0, 0.18));
+                linear-gradient(180deg, rgba(2, 6, 12, 0.84), rgba(1, 4, 8, 0.94));
         transition:
-            border-color 140ms ease,
-            background 140ms ease,
-            box-shadow 140ms ease;
+                border-color 140ms ease,
+                box-shadow 140ms ease,
+                background 140ms ease;
     }
 
     .card-zone::before {
+        content: "";
         position: absolute;
-        left: 0.55rem;
-        top: 0.45rem;
-        z-index: 0;
-        color: rgba(248, 248, 242, 0.28);
-        font-size: 0.62rem;
-        font-weight: 900;
-        letter-spacing: 0;
-        text-transform: uppercase;
+        inset: 6px;
+        border: 1px solid rgba(57, 182, 255, 0.08);
         pointer-events: none;
     }
 
-
-
-
-    .card-zone--me {
-        cursor: default;
+    .zone-label {
+        position: absolute;
+        top: 0.28rem;
+        left: 0.45rem;
+        color: var(--muted);
+        font-size: 0.56rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        pointer-events: none;
     }
 
     .card-zone--me.playable-zone {
         cursor: pointer;
-        border-block-color: rgba(112, 217, 0, 0.82);
+        border-color: rgba(151, 255, 56, 0.68);
         background:
-            linear-gradient(180deg, rgba(112, 217, 0, 0.12), rgba(0, 0, 0, 0.22));
+                linear-gradient(180deg, rgba(13, 28, 10, 0.72), rgba(2, 6, 8, 0.95));
         box-shadow:
-            inset 0 0 0 1px rgba(112, 217, 0, 0.18),
-            inset 0 0 22px rgba(112, 217, 0, 0.08);
+                inset 0 0 0 1px rgba(151, 255, 56, 0.14),
+                0 0 18px rgba(151, 255, 56, 0.08);
     }
 
     .card-zone--me.playable-zone::after {
-        content: "Click to play";
+        content: "DEPLOY READY";
         position: absolute;
-        right: 0.55rem;
-        bottom: 0.45rem;
-        color: #70d900;
-        font-size: 0.62rem;
-        font-weight: 900;
+        right: 0.45rem;
+        bottom: 0.35rem;
+        color: var(--green);
+        font-size: 0.56rem;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
         pointer-events: none;
     }
 
     .card-slot {
         position: relative;
-        z-index: 1;
         container-type: size;
         display: grid;
         min-width: 0;
@@ -685,108 +1134,134 @@
         --card-width: min(100cqw, calc(100cqh * 0.7142857));
     }
 
-    .location-card {
+    .pending-card {
         position: relative;
-        display: grid;
-        grid-template-rows: auto 1fr auto 1fr auto;
-        align-items: center;
-        justify-items: center;
-        gap: 0.2rem;
-        width: 100%;
-        min-width: 0;
-        padding: clamp(0.45rem, 1vw, 0.8rem);
+    }
 
-        background:
-            linear-gradient(180deg, rgba(38, 40, 45, 0.92), rgba(13, 16, 22, 0.96));
-
-        text-align: center;
-        font-size: clamp(0.75rem, 1.3vw, 1rem);
-        font-weight: 700;
+    .pending-remove {
+        position: absolute;
+        top: -0.25rem;
+        right: -0.25rem;
+        z-index: 4;
+        width: 1.2rem;
+        height: 1.2rem;
+        border: 1px solid rgba(255, 100, 100, 0.45);
+        background: rgba(40, 10, 10, 0.95);
+        color: #ff8484;
+        font-size: 0.8rem;
+        line-height: 1;
         cursor: pointer;
     }
 
-
-
-    .location-card .location-power:first-child {
-        margin-top: -0.15rem;
+    .location-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        min-width: 0;
+        min-height: 8rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid rgba(170, 185, 210, 0.22);
+        border-radius: 2.7rem;
+        background:
+                linear-gradient(180deg, rgba(31, 35, 44, 0.98), rgba(17, 21, 29, 0.98));
+        color: white;
+        text-align: center;
+        cursor: pointer;
+        overflow: hidden;
     }
 
-    .location-card::before {
-        left: 0;
-    }
-
-    .location-card::after {
-        right: 0;
+    .location-card__scan {
+        position: absolute;
+        inset: 0;
+        background:
+                linear-gradient(180deg, transparent, rgba(255,255,255,0.025), transparent);
+        background-size: 100% 5px;
+        opacity: 0.16;
+        pointer-events: none;
     }
 
     .location-card:hover {
-        border-inline-color: rgba(112, 217, 0, 0.45);
-        background:
-            linear-gradient(180deg, rgba(38, 41, 45, 0.92), rgba(10, 14, 20, 0.96));
+        border-color: rgba(57, 182, 255, 0.45);
+        box-shadow: 0 0 18px rgba(57, 182, 255, 0.08);
     }
 
-    .location-power {
+    .location-card__body {
+        display: grid;
+        justify-items: center;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    .location-card__meta {
+        color: var(--muted);
+        font-size: 0.56rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .location-card__power {
         display: grid;
         place-items: center;
-        min-width: 2.05rem;
-        height: 2.05rem;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        width: 2.3rem;
+        height: 2.3rem;
+        border: 1px solid rgba(255,255,255,0.15);
         border-radius: 999px;
-        background: #2a2b30;
-        color: #f8f8f2;
-        font-size: clamp(0.95rem, 1.5vw, 1.2rem);
+        background: rgba(56, 60, 72, 0.98);
+        color: white;
+        font-family: var(--title-font);
+        font-size: 1.2rem;
         font-weight: 900;
-        box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
-    }
-
-    .location-power--opponent {
-        align-self: start;
-    }
-
-    .location-power--me {
-        align-self: end;
+        flex-shrink: 0;
     }
 
     .location-name {
         max-width: 100%;
         overflow: hidden;
         color: white;
-        font-size: clamp(1.05rem, 1.45vw, 1.35rem);
-        font-weight: 950;
-        line-height: 1.1;
+        font-family: var(--title-font);
+        font-size: clamp(0.95rem, 1.35vw, 1.35rem);
+        font-weight: 800;
+        line-height: 1.05;
+        text-transform: uppercase;
         text-overflow: ellipsis;
-        text-shadow: 0 1px 0 #000;
         white-space: nowrap;
     }
 
     .location-effect,
     .location-state {
-        max-width: min(100%, 22rem);
-        color: rgba(248, 248, 242, 0.9);
-        font-size: clamp(0.52rem, 0.72vw, 0.66rem);
-        font-weight: 750;
-        line-height: 1.25;
+        max-width: min(100%, 20rem);
+        color: rgba(230, 239, 255, 0.88);
+        font-size: 0.66rem;
+        line-height: 1.22;
     }
 
     .location-state {
-        color: #70d900;
+        color: var(--orange);
+        letter-spacing: 0.12em;
         text-transform: uppercase;
     }
 
+    .hand-shell {
+        display: grid;
+        gap: 0.5rem;
+        border: 1px solid rgba(57, 182, 255, 0.18);
+        background:
+                linear-gradient(180deg, rgba(8, 14, 22, 0.92), rgba(4, 8, 14, 0.96));
+        padding: 0.7rem;
+    }
+
     .hand-zone {
-        --hand-card-width: min(124px, calc((100% - 4.5rem) / 7));
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: clamp(0.35rem, 1vw, 0.75rem);
-        width: 100%;
-        min-height: 0;
-        padding: clamp(0.65rem, 1.5vw, 1.25rem);
-
-
+        gap: 0.75rem;
+        min-height: 7rem;
     }
 
-    .hand-zone button {
+    .hand-card-button {
         flex: 1;
         container-type: size;
         display: grid;
@@ -794,28 +1269,60 @@
         height: 100%;
         min-width: 0;
         padding: 0;
-        border: 0;
+        border: 1px solid transparent;
         background: transparent;
+        transition:
+                transform 120ms ease,
+                filter 120ms ease,
+                border-color 120ms ease,
+                box-shadow 120ms ease;
+    }
+
+    .hand-card-button:hover {
+        transform: translateY(-5px);
+        filter: brightness(1.05);
+    }
+
+    .hand-card-button.selected-card {
+        border-color: rgba(151, 255, 56, 0.72);
+        box-shadow: 0 0 20px rgba(151, 255, 56, 0.1);
+        transform: translateY(-6px);
     }
 
     .hand-zone :global(.snap-card) {
         --card-width: min(100cqw, calc(100cqh * 0.7142857));
     }
 
+    .inspector-panel {
+        border: 1px solid rgba(57, 182, 255, 0.24);
+        background:
+                linear-gradient(180deg, rgba(9, 17, 29, 0.95), rgba(5, 10, 18, 0.98));
+        padding: 0.7rem;
+    }
+
     .inspector {
         display: grid;
-        gap: 0.35rem;
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid rgba(112, 217, 0, 0.35);
-        color: white;
-        background: #202126;
-        font-size: 0.85rem;
+        gap: 0.5rem;
+        color: var(--text);
+        font-size: 0.76rem;
+        line-height: 1.35;
+    }
+
+    .inspector > strong {
+        color: var(--blue);
+        font-family: var(--title-font);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .inspector-stats {
+        display: grid;
+        gap: 0.25rem;
     }
 
     .inspector ul {
         display: grid;
-        gap: 0.25rem;
+        gap: 0.35rem;
         margin: 0;
         padding: 0;
         list-style: none;
@@ -823,52 +1330,67 @@
 
     .inspector li {
         display: grid;
-        grid-template-columns: 2rem 1fr;
-        gap: 0.35rem;
+        grid-template-columns: 3rem 1fr;
+        gap: 0.4rem;
+        padding-top: 0.35rem;
+        border-top: 1px solid rgba(57, 182, 255, 0.08);
+    }
+
+    .inspector-delta {
+        color: var(--orange);
+        font-weight: 700;
     }
 
     .inspector small {
         grid-column: 2;
-        color: rgb(203 213 225);
-    }
-
-    button.selected-card {
-        outline: 2px solid #70d900;
-        outline-offset: 2px;
-        border-radius: 4px;
+        color: var(--muted);
     }
 
     .card-detail-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 50;
+        z-index: 60;
         display: grid;
         place-items: center;
         padding: 1rem;
-        background: rgba(0, 0, 0, 0.72);
+        background: rgba(2, 5, 10, 0.85);
+        backdrop-filter: blur(5px);
     }
 
     .card-detail {
         display: grid;
-        justify-items: center;
-        gap: 0.75rem;
-        max-width: min(92vw, 24rem);
+        gap: 0.7rem;
+        width: min(95vw, 62rem);
+        border: 1px solid rgba(57, 182, 255, 0.32);
+        background:
+                linear-gradient(180deg, rgba(7, 13, 22, 0.98), rgba(4, 8, 14, 0.99));
+        padding: 0.9rem;
+        box-shadow: 0 0 30px rgba(57, 182, 255, 0.08);
     }
 
-    .card-detail-stats {
+    .card-detail__grid {
         display: grid;
-        gap: 0.5rem;
-        width: 100%;
-        border: 1px solid rgba(112, 217, 0, 0.55);
-        background: #202126;
-        color: white;
-        padding: 0.75rem;
-        font-size: 0.82rem;
-        text-align: left;
+        grid-template-columns: minmax(14rem, 1fr) auto minmax(14rem, 1fr);
+        gap: 0.8rem;
+        align-items: start;
     }
 
-    .card-detail-stats > strong {
-        color: #70d900;
+    .card-detail-stats,
+    .card-detail-effect {
+        display: grid;
+        gap: 0.55rem;
+        border: 1px solid rgba(57, 182, 255, 0.22);
+        background:
+                linear-gradient(180deg, rgba(8, 15, 26, 0.96), rgba(4, 8, 14, 0.98));
+        padding: 0.8rem;
+        color: var(--text);
+    }
+
+    .card-detail-stats > strong,
+    .card-detail-effect strong {
+        color: var(--orange);
+        font-family: var(--title-font);
+        letter-spacing: 0.08em;
         text-transform: uppercase;
     }
 
@@ -883,16 +1405,16 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-        min-width: 0;
-        padding: 0.4rem 0.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.24);
+        padding: 0.45rem 0.55rem;
+        border: 1px solid rgba(57, 182, 255, 0.18);
+        background: rgba(3, 7, 12, 0.55);
     }
 
     .card-detail-stat-row span {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 0.65rem;
+        color: var(--muted);
+        font-size: 0.64rem;
         text-transform: uppercase;
+        letter-spacing: 0.12em;
     }
 
     .card-detail-stats ul {
@@ -905,56 +1427,83 @@
 
     .card-detail-stats li {
         display: grid;
-        grid-template-columns: 2rem 1fr;
+        grid-template-columns: 2.5rem 1fr;
         gap: 0.35rem;
-    }
-
-    .card-detail-stats small {
-        color: rgb(203 213 225);
     }
 
     .card-detail-stats li small {
         grid-column: 2;
+        color: var(--muted);
     }
 
-    .card-detail-effect {
-        width: 100%;
-        border: 1px solid rgba(112, 217, 0, 0.55);
-        background: #202126;
-        color: white;
-        padding: 0.85rem;
-        text-align: center;
-    }
-
-    .card-detail-effect strong {
-        display: block;
-        color: #70d900;
-        text-transform: uppercase;
-        margin-bottom: 0.45rem;
+    .card-detail-card {
+        display: grid;
+        place-items: center;
     }
 
     .card-detail-effect p {
         margin: 0;
         font-size: 0.9rem;
-        line-height: 1.35;
+        line-height: 1.45;
+    }
+
+    @media (max-width: 1100px) {
+        .match-layout {
+            grid-template-columns: 12rem minmax(0, 1fr) 12rem;
+        }
+
+        .card-detail__grid {
+            grid-template-columns: 1fr;
+            justify-items: center;
+        }
     }
 
     @media (max-width: 760px) {
         .match-layout {
             grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem;
+            gap: 0.45rem;
+            padding: 0.45rem;
         }
 
         .board-grid {
             gap: 0.35rem;
-            padding: 0.35rem;
         }
 
         .location-column {
-            grid-template-rows: minmax(0, 1fr) clamp(4.5rem, 17dvh, 7rem) minmax(0, 1fr);
+            grid-template-rows: auto minmax(0, 1fr) 6.2rem minmax(0, 1fr);
+            padding: 0.25rem;
         }
 
-        .hand-zone {
-            --hand-card-width: min(78px, calc((100% - 2.5rem) / 5));
+        .location-card {
+            min-height: 6.2rem;
+            border-radius: 2rem;
+            padding: 0.45rem;
+        }
+
+        .location-name {
+            font-size: 0.78rem;
+        }
+
+        .location-effect,
+        .location-state {
+            font-size: 0.52rem;
+        }
+
+        .center-topbar {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar-actions {
+            flex-wrap: wrap;
+        }
+
+        .hud-mini-btn {
+            min-width: 3.2rem;
+        }
+
+        .rail-panel,
+        .inspector-panel {
+            padding: 0.45rem;
         }
     }
 </style>
