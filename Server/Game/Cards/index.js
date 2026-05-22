@@ -10,7 +10,6 @@ const registry = {
     js: JavaScriptCard,
     wifi: WifiCard,
     gpt: GptCard,
-    gpd: GptCard,
     recursion: RecursionCard
 }
 

@@ -18,6 +18,7 @@ export class EffectContext {
     }
 
     createCard(cardId, locationId, ownerId) {
+        console.log('creating card effect', cardId, locationId, ownerId)
         this.events.push({
             type: 'CREATE_CARD',
             cardId,

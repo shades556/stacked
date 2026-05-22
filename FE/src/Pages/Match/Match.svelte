@@ -15,6 +15,7 @@
     let stagedPlays = $state([])
     let inspected = $state(null)
     let detailedCard = $state(null)
+    let detailedLocation = $state(null)
 
     let { route } = $props()
 
@@ -47,7 +48,7 @@
         }
     })))
 
-    const myHand = $derived((game?.me?.hand ?? []).filter(card => !stagedCardIds.has(card.instanceId)))
+    const myHand = $derived((game?.me?.hand ?? []).filter(card => ! stagedCardIds.has(card.instanceId)))
 
     const selectCard = (card) => {
         if (card?.hidden) return
@@ -57,7 +58,7 @@
     }
 
     const addCard = (locationId) => {
-        if (!selected) return
+        if ( ! selected) return
         if (me?.lockedIn) return
         if (game?.phase !== 'play') return
         if (selected.cost > availableEnergy) return
@@ -79,7 +80,7 @@
     }
 
     const canPlayAt = (location) => {
-        if (!selected) return false
+        if ( ! selected) return false
         if (me?.lockedIn) return false
         if (game?.phase !== 'play') return false
         if (selected.cost > availableEnergy) return false
@@ -91,6 +92,10 @@
         if (typeof power === 'number') return power
         return power?.total ?? 0
     }
+
+	const hasMorePower = (p1, p2) => {
+        return p1 > p2
+	}
 
     const cardInspection = (card) => {
         return {
@@ -113,38 +118,67 @@
         const detail = cardInspection(card)
         inspected = detail
         detailedCard = detail
+        detailedLocation = null
     }
 
     const closeCardDetail = () => {
         detailedCard = null
     }
 
-    const inspectLocation = (location) => {
-        const locationModifierRows = (cards, ownerLabel) => {
+    const locationInspection = (location) => {
+        const cardPowerRows = (cards, ownerLabel) => {
             return cards.flatMap(card => [
                 {
-                    label: `${card.title} base`,
-                    power: card.power.basePower,
+                    label: `${ card.title } base`,
+                    power: card.power?.basePower ?? 0,
                     source: { name: ownerLabel },
                     description: 'Base card power'
                 },
-                ...card.power.modifiers.map(modifier => ({
+                ...(card.power?.modifiers ?? []).map(modifier => ({
                     ...modifier,
-                    label: `${card.title}: ${modifier.label}`,
+                    label: `${ card.title }: ${ modifier.label }`,
                     source: modifier.source ?? { name: ownerLabel }
                 }))
             ])
         }
 
-        inspected = {
+        const locationPowerRows = (power, ownerLabel) => {
+            return (power?.modifiers ?? []).map(modifier => ({
+                ...modifier,
+                label: `${ ownerLabel }: ${ modifier.label ?? 'Location modifier' }`,
+                source: modifier.source ?? { name: ownerLabel }
+            }))
+        }
+
+        return {
             type: 'location',
             title: location.name,
+            location,
+            revealed: location.revealed,
+            effect: location.effect,
             power: location.power,
             modifiers: [
-                ...locationModifierRows(location.power?.me?.cards ?? [], 'My board'),
-                ...locationModifierRows(location.power?.opponent?.cards ?? [], 'Opponent board')
+                ...cardPowerRows(location.power?.me?.cards ?? [], 'My board'),
+                ...locationPowerRows(location.power?.me, 'My board'),
+                ...cardPowerRows(location.power?.opponent?.cards ?? [], 'Opponent board'),
+                ...locationPowerRows(location.power?.opponent, 'Opponent board')
             ]
         }
+    }
+
+    const inspectLocation = (location) => {
+        inspected = locationInspection(location)
+    }
+
+    const openLocationDetail = (location) => {
+        const detail = locationInspection(location)
+        inspected = detail
+        detailedLocation = detail
+        detailedCard = null
+    }
+
+    const closeLocationDetail = () => {
+        detailedLocation = null
     }
 
     const endTurn = async () => {
@@ -195,50 +229,50 @@
     })
 </script>
 
-<div class="match-hud">
-	<div class="hud-noise"></div>
-	<div class="hud-vignette"></div>
-	<div class="hud-scanline"></div>
-	<div class="hud-grid"></div>
-	<div class="hud-crosshair hud-crosshair--a"></div>
-	<div class="hud-crosshair hud-crosshair--b"></div>
+<div class='match-hud mx-auto'>
+	<div class='hud-noise'></div>
+	<div class='hud-vignette'></div>
+	<div class='hud-scanline'></div>
+	<div class='hud-grid'></div>
+	<div class='hud-crosshair hud-crosshair--a'></div>
+	<div class='hud-crosshair hud-crosshair--b'></div>
 
-	<div class="match-layout">
-		<aside class="player-rail player-rail--me">
-			<div class="hud-tag">LOCAL PILOT</div>
+	<div class='match-layout'>
+		<aside class='player-rail player-rail--me'>
 
-			<div class="rail-panel rail-panel--player">
-				<div class="rail-panel__header">
+
+			<div class='rail-panel rail-panel--player'>
+				<div class='rail-panel__header'>
 					<span>PLAYER NODE</span>
 					<small>LINK ACTIVE</small>
 				</div>
 
-				<Button class="player-chip player-chip--me">
+				<Button class='player-chip player-chip--me'>
 					{me?.username ?? 'Me'}
 				</Button>
 
-				<div class="identity-lines">
+				<div class='identity-lines'>
 					<div><span>ID</span><strong>{player.player_id ?? '---'}</strong></div>
 					<div><span>MATCH</span><strong>{matchId || '----'}</strong></div>
 				</div>
 			</div>
 
-			<div class="rail-panel rail-panel--energy">
-				<div class="panel-title">ENERGY CELL</div>
-				<div class="energy-panel">
+			<div class='rail-panel rail-panel--energy'>
+				<div class='panel-title'>ENERGY CELL</div>
+				<div class='energy-panel'>
 					<span>AVAILABLE</span>
 					<strong>{availableEnergy}</strong>
 				</div>
-				<div class="micro-stats">
+				<div class='micro-stats'>
 					<div><span>BASE</span><b>{me?.energy ?? 0}</b></div>
 					<div><span>STAGED</span><b>{stagedEnergy}</b></div>
 				</div>
 			</div>
 
-			<div class="rail-panel rail-panel--phase">
-				<div class="panel-title">TACTICAL STATE</div>
-				<div class="status-panel">{phaseLabel}</div>
-				<div class="phase-subline">
+			<div class='rail-panel rail-panel--phase'>
+				<div class='panel-title'>TACTICAL STATE</div>
+				<div class='status-panel'>{phaseLabel}</div>
+				<div class='phase-subline'>
 					{#if selected}
 						SELECTED: {selected.title}
 					{:else}
@@ -248,53 +282,39 @@
 			</div>
 
 			<Button
-					size="lg"
-					class="action-button retreat-button"
-					variant="destructive"
+					size='lg'
+					class='action-button retreat-button'
+					variant='destructive'
 			>
 				Retreat
 			</Button>
 		</aside>
 
-		<main class="center-panel">
-			<div class="center-topbar">
-				<div class="topbar-block">
-					<span>SCENESCAPES</span>
-					<strong>TACTICAL MATCH INTERFACE</strong>
-				</div>
+		<main class='center-panel'>
 
-				<div class="topbar-block topbar-block--center">
-					<span>PHASE</span>
-					<strong>{game?.phase?.toUpperCase?.() ?? 'INIT'}</strong>
-				</div>
 
-				<div class="topbar-actions">
-					<div class="hud-mini-btn">SCAN</div>
-					<div class="hud-mini-btn">SYNC</div>
-					<div class="hud-mini-btn">TRACE</div>
-				</div>
-			</div>
+			<div class='board-shell flex flex-col h-full border border-red-500 mx-6'>
 
-			<div class="board-shell">
-				<div class="board-frame-label">TACTICAL BOARD / THREE-LANE ARRAY</div>
 
-				<div class="board-grid">
+				<div class='board-grid h-[80%]'>
 					{#each board as b}
-						<section class="location-column">
-							<div class="column-corners"></div>
+						{@const powerOp = locationPowerTotal(b.power?.opponent)}
+						{@const powerMe = locationPowerTotal(b.power?.me)}
+						<section class='location-column'>
+							<div class='column-corners'></div>
 
-				<!--			<div class="sector-header">
-								<span>SECTOR {b.id}</span>
-								<small>{b.revealed ? 'REVEALED' : 'LOCKED'}</small>
-							</div>-->
+							<!--			<div class="sector-header">
+											<span>SECTOR {b.id}</span>
+											<small>{b.revealed ? 'REVEALED' : 'LOCKED'}</small>
+										</div>-->
 
-							<div class="card-zone card-zone--opponent">
-								<div class="zone-label">OPPONENT DEPLOYMENT</div>
+							<div class='card-zone card-zone--opponent'>
+								<div class='zone-label'>OPPONENT DEPLOYMENT</div>
 
 								{#each b.slots.opponent as card}
-									<div class="card-slot">
+									<div class='card-slot'>
 										{#if isHiddenCard(card)}
-											<CardBack />
+											<CardBack/>
 										{:else}
 											<Card
 													{card}
@@ -309,34 +329,43 @@
 								{/each}
 							</div>
 
-							<button
-									class="location-card"
-									onclick={() => inspectLocation(b)}
+							<div
+									class='location-card flex flex-col items-center justify-center'
+									onclick={() => openLocationDetail(b)}
+									onkeydown={(event) => {
+                                    if (event.key !== 'Enter' && event.key !== ' ') return
+                                    event.preventDefault()
+                                    openLocationDetail(b)
+                                }}
+									role='button'
+									tabindex='0'
 									aria-label={`Inspect ${b.name}`}
 							>
-								<div class="location-card__scan"></div>
-								<div class="location-card__power location-card__power--opponent">
-									{locationPowerTotal(b.power?.opponent)}
+
+								<div class='absolute  z-10 translate-0 -top-3.5'>
+									<div class='location-card__power location-card__power--opponent'  class:!bg-blue-900={hasMorePower(powerOp, powerMe)}>
+										{powerOp}
+									</div>
 								</div>
 
-								<div class="location-card__body">
-									<div class="location-card__meta">ZONE PROFILE</div>
-									<div class="location-name">{b.name}</div>
-									<div class="location-effect">
+								<div class='location-card__body'>
+									<div class='location-name'>{b.name}</div>
+									<div class='location-effect'>
 										{b.effect}
 									</div>
-									{#if !b.revealed}
-										<div class="location-state">UNREVEALED</div>
+									{#if ! b.revealed}
+										<div class='location-state'>UNREVEALED</div>
 									{/if}
 								</div>
-
-								<div class="location-card__power location-card__power--me">
-									{locationPowerTotal(b.power?.me)}
+								<div class='absolute  z-10 translate-0 -bottom-3.5'>
+									<div class='location-card__power location-card__power--me' class:!bg-blue-900={hasMorePower(powerMe, powerOp)}>
+										{powerMe}
+									</div>
 								</div>
-							</button>
+							</div>
 
 							<div
-									class="card-zone card-zone--me"
+									class='card-zone card-zone--me'
 									class:playable-zone={canPlayAt(b)}
 									onclick={() => addCard(b.id)}
 									role={canPlayAt(b) ? 'button' : undefined}
@@ -348,12 +377,12 @@
                                 }}
 									aria-label={canPlayAt(b) ? `Play ${selected.title} to ${b.name}` : undefined}
 							>
-								<div class="zone-label">LOCAL DEPLOYMENT</div>
+								<div class='zone-label'>LOCAL DEPLOYMENT</div>
 
 								{#each b.slots.me as card}
-									<div class="card-slot">
+									<div class='card-slot'>
 										{#if isHiddenCard(card)}
-											<CardBack />
+											<CardBack/>
 										{:else}
 											<div class:pending-card={card.pending}>
 												<Card
@@ -368,7 +397,7 @@
 
 												{#if card.pending}
 													<button
-															class="pending-remove"
+															class='pending-remove'
 															onclick={(event) => {
                                                             event.stopPropagation()
                                                             removeStagedPlay(card.instanceId)
@@ -387,16 +416,17 @@
 					{/each}
 				</div>
 
-				<div class="hand-shell">
-					<div class="hand-shell__header">
-						<span>HAND DOCK</span>
-						<small>{myHand.length} UNITS READY</small>
-					</div>
+				<div class='hand-shell flex flex-col h-[20%]'>
+					<!--			<div class="hand-shell__header">
+									<span>HAND DOCK</span>
+									<small>{myHand.length} UNITS READY</small>
+								</div>-->
 
-					<div class="hand-zone">
+					<div class='hand-zone h-full'>
 						{#each myHand as card}
+							{@const w = 100 / myHand.length}
 							<button
-									class="hand-card-button"
+									class='hand-card-button'
 									class:selected-card={selected?.instanceId === card.instanceId}
 									onclick={() => {
                                     selectCard(card)
@@ -409,7 +439,7 @@
                                 }}
 									aria-disabled={me?.lockedIn || game?.phase !== 'play'}
 							>
-								<Card {card} />
+								<Card {card}/>
 							</button>
 						{/each}
 					</div>
@@ -417,67 +447,49 @@
 			</div>
 		</main>
 
-		<aside class="player-rail player-rail--opponent">
-			<div class="hud-tag hud-tag--right">REMOTE NODE</div>
+		<aside class='player-rail player-rail--opponent'>
 
-			<div class="rail-panel rail-panel--player">
-				<div class="rail-panel__header">
+
+			<div class='rail-panel rail-panel--player'>
+				<div class='rail-panel__header'>
 					<span>OPPONENT LINK</span>
 					<small>TRACKING</small>
 				</div>
 
-				<Button class="player-chip player-chip--opponent">
+				<Button class='player-chip player-chip--opponent'>
 					{opponent?.username ?? 'Waiting...'}
 				</Button>
 
-				<div class="identity-lines">
+				<div class='identity-lines'>
 					<div><span>HAND</span><strong>{opponent?.handCount ?? '--'}</strong></div>
 					<div><span>QUEUE</span><strong>{opponent?.pendingCount ?? '--'}</strong></div>
 				</div>
 			</div>
 
-			<div class="rail-panel">
-				<div class="panel-title">ENEMY STATUS</div>
-				<div class="status-panel">{opponentStatus}</div>
+			<div class='rail-panel'>
+				<div class='panel-title'>ENEMY STATUS</div>
+				<div class='status-panel'>{opponentStatus}</div>
 			</div>
 
-			<div class="rail-panel rail-panel--turn">
-				<div class="panel-title">TURN INDEX</div>
-				<div class="turn-panel">
-					<span>TURN</span>
-					<strong>{game?.turn ?? 1}</strong>
-				</div>
-			</div>
-
-			<Button
-					size="lg"
-					class="action-button end-turn-button"
-					variant="outline"
-					onclick={endTurn}
-					disabled={me?.lockedIn || game?.phase !== 'play'}
-			>
-				End Turn
-			</Button>
-
-			{#if inspected}
-				<div class="inspector-panel">
-					<div class="inspector-panel__header">
+		<!--	{#if inspected}
+				<div class='inspector-panel'>
+					<div class='inspector-panel__header'>
 						<span>TELEMETRY INSPECTOR</span>
 						<small>{inspected.type?.toUpperCase?.() ?? 'DATA'}</small>
 					</div>
 
-					<div class="inspector">
+					<div class='inspector'>
 						<strong>{inspected.title}</strong>
 
 						{#if inspected.type === 'card'}
-							<div class="inspector-stats">
+							<div class='inspector-stats'>
 								<div><span>POWER</span><b>{inspected.totalPower}</b></div>
 								<div><span>BASE</span><b>{inspected.basePower}</b></div>
 							</div>
 						{/if}
 
 						{#if inspected.type === 'location'}
-							<div class="inspector-stats">
+							<div class='inspector-stats'>
 								<div><span>ME</span><b>{locationPowerTotal(inspected.power?.me)}</b></div>
 								<div><span>OPP</span><b>{locationPowerTotal(inspected.power?.opponent)}</b></div>
 							</div>
@@ -487,13 +499,13 @@
 							<ul>
 								{#each inspected.modifiers as modifier}
 									<li>
-                                        <span class="inspector-delta">
+                                        <span class='inspector-delta'>
                                             {modifier.power > 0 ? '+' : ''}{modifier.power}
                                         </span>
 										<span>{modifier.label}</span>
 										<small>
 											{modifier.source?.name ?? 'Unknown source'}
-											{modifier.description ? ` - ${modifier.description}` : ''}
+											{modifier.description ? ` - ${ modifier.description }` : ''}
 										</small>
 									</li>
 								{/each}
@@ -503,16 +515,36 @@
 						{/if}
 					</div>
 				</div>
-			{/if}
+			{/if}-->
+
+			<div class='rail-panel rail-panel--turn'>
+				<div class='panel-title'>TURN INDEX</div>
+				<div class='turn-panel'>
+					<span>TURN</span>
+					<strong>{game?.turn ?? 1}</strong>
+				</div>
+			</div>
+
+			<Button
+					size='lg'
+					class='action-button end-turn-button'
+					variant='outline'
+					onclick={endTurn}
+					disabled={me?.lockedIn || game?.phase !== 'play'}
+			>
+				End Turn
+			</Button>
+
+
 		</aside>
 	</div>
 </div>
 
 {#if detailedCard}
 	<div
-			class="card-detail-backdrop"
-			role="button"
-			tabindex="0"
+			class='card-detail-backdrop'
+			role='button'
+			tabindex='0'
 			onclick={closeCardDetail}
 			onkeydown={(event) => {
             if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
@@ -522,22 +554,22 @@
         }}
 	>
 		<div
-				class="card-detail"
-				role="dialog"
-				aria-modal="true"
+				class='card-detail'
+				role='dialog'
+				aria-modal='true'
 				aria-label={detailedCard.title}
 				onclick={(event) => event.stopPropagation()}
 		>
-			<div class="card-detail__topline">
+			<div class='card-detail__topline'>
 				<span>UNIT DETAIL VIEW</span>
 				<small>EXPANDED TELEMETRY</small>
 			</div>
 
-			<div class="card-detail__grid">
-				<div class="card-detail-stats">
+			<div class='card-detail__grid'>
+				<div class='card-detail-stats'>
 					<strong>{detailedCard.title}</strong>
 
-					<div class="card-detail-stat-row">
+					<div class='card-detail-stat-row'>
 						<div>
 							<span>Power</span>
 							<b>{detailedCard.totalPower}</b>
@@ -556,7 +588,7 @@
 									<span>{modifier.label}</span>
 									<small>
 										{modifier.source?.name ?? 'Unknown source'}
-										{modifier.description ? ` - ${modifier.description}` : ''}
+										{modifier.description ? ` - ${ modifier.description }` : ''}
 									</small>
 								</li>
 							{/each}
@@ -566,16 +598,126 @@
 					{/if}
 				</div>
 
-				<div class="card-detail-card">
-					<Card card={detailedCard.card} large holographic />
+				<div class='card-detail-card'>
+					<Card card={detailedCard.card} large holographic/>
 				</div>
 
-				<div class="card-detail-effect">
+				<div class='card-detail-effect'>
 					<strong>Effect</strong>
 					{#if detailedCard.card.text}
 						<p>{detailedCard.card.text}</p>
 					{:else}
 						<p>No effect.</p>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if detailedLocation}
+	<div
+			class='card-detail-backdrop'
+			role='button'
+			tabindex='0'
+			onclick={closeLocationDetail}
+			onkeydown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                closeLocationDetail()
+            }
+        }}
+	>
+		<div
+				class='card-detail'
+				role='dialog'
+				aria-modal='true'
+				aria-label={detailedLocation.title}
+				onclick={(event) => event.stopPropagation()}
+		>
+			<div class='card-detail__topline'>
+				<span>LOCATION DETAIL VIEW</span>
+				<small>SECTOR TELEMETRY</small>
+			</div>
+
+			<div class='card-detail__grid location-detail__grid'>
+				<div class='card-detail-stats'>
+					<strong>{detailedLocation.title}</strong>
+					<div class='card-detail-stat-row'>
+						<div>
+							<span>Me</span>
+							<b>{locationPowerTotal(detailedLocation.power?.me)}</b>
+						</div>
+						<div>
+							<span>Opponent</span>
+							<b>{locationPowerTotal(detailedLocation.power?.opponent)}</b>
+						</div>
+					</div>
+
+					<div class='card-detail-stat-row'>
+						<div>
+							<span>Status</span>
+							<b>{detailedLocation.revealed ? 'Revealed' : 'Hidden'}</b>
+						</div>
+						<div>
+							<span>Sector</span>
+							<b>{detailedLocation.location?.id ?? detailedLocation.location?.order ?? '--'}</b>
+						</div>
+					</div>
+
+					{#if detailedLocation.modifiers?.length}
+						<ul>
+							{#each detailedLocation.modifiers as modifier}
+								<li>
+									<span>{modifier.power > 0 ? '+' : ''}{modifier.power}</span>
+									<span>{modifier.label}</span>
+									<small>
+										{modifier.source?.name ?? 'Unknown source'}
+										{modifier.description ? ` - ${ modifier.description }` : ''}
+									</small>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<small>No power modifiers</small>
+					{/if}
+				</div>
+
+				<div class='card-detail-card'>
+					<div class='location-detail-card' class:location-detail-card--unrevealed={!detailedLocation.revealed}>
+						<div class='location-detail-card__topbar'>
+							<span>{detailedLocation.revealed ? 'REVEALED' : 'UNREVEALED'}</span>
+							<small>#{detailedLocation.location?.order ?? '?'}</small>
+						</div>
+						<div class='location-detail-card__body'>
+							<strong>{detailedLocation.title}</strong>
+							<p>
+								{#if detailedLocation.revealed}
+									{detailedLocation.effect || 'No effect.'}
+								{:else}
+									Location data is hidden.
+								{/if}
+							</p>
+						</div>
+						<div class='location-detail-card__totals'>
+							<div>
+								<span>ME</span>
+								<b>{locationPowerTotal(detailedLocation.power?.me)}</b>
+							</div>
+							<div>
+								<span>OPP</span>
+								<b>{locationPowerTotal(detailedLocation.power?.opponent)}</b>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class='card-detail-effect'>
+					<strong>Effect</strong>
+					{#if detailedLocation.revealed}
+						<p>{detailedLocation.effect || 'No effect.'}</p>
+					{:else}
+						<p>This location has not been revealed yet.</p>
 					{/if}
 				</div>
 			</div>
@@ -615,10 +757,7 @@
         min-height: 100%;
         overflow: hidden;
         color: var(--text);
-        background:
-                radial-gradient(circle at 50% 50%, rgba(20, 60, 110, 0.14), transparent 42%),
-                radial-gradient(circle at 20% 20%, rgba(255, 145, 40, 0.06), transparent 30%),
-                linear-gradient(180deg, #04070c, #050a10 32%, #060b11 100%);
+
         font-family: var(--hud-font);
     }
 
@@ -632,21 +771,19 @@
     }
 
     .hud-grid {
-        background:
-                linear-gradient(rgba(45, 96, 153, 0.12) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(45, 96, 153, 0.12) 1px, transparent 1px);
+        background: linear-gradient(rgba(45, 96, 153, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(45, 96, 153, 0.12) 1px, transparent 1px);
         background-size: 56px 56px;
         opacity: 0.24;
     }
 
     .hud-scanline {
-        background:
-                linear-gradient(
-                        180deg,
-                        transparent 0%,
-                        rgba(80, 160, 255, 0.025) 50%,
-                        transparent 100%
-                );
+        background: linear-gradient(
+                180deg,
+                transparent 0%,
+                rgba(80, 160, 255, 0.025) 50%,
+                transparent 100%
+        );
         background-size: 100% 4px;
         opacity: 0.24;
         mix-blend-mode: screen;
@@ -654,17 +791,15 @@
 
     .hud-noise {
         opacity: 0.05;
-        background-image:
-                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.45) 0 0.5px, transparent 0.6px),
-                radial-gradient(circle at 80% 30%, rgba(255,255,255,0.35) 0 0.5px, transparent 0.6px),
-                radial-gradient(circle at 40% 75%, rgba(255,255,255,0.3) 0 0.5px, transparent 0.6px),
-                radial-gradient(circle at 70% 80%, rgba(255,255,255,0.25) 0 0.5px, transparent 0.6px);
+        background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.45) 0 0.5px, transparent 0.6px),
+        radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.35) 0 0.5px, transparent 0.6px),
+        radial-gradient(circle at 40% 75%, rgba(255, 255, 255, 0.3) 0 0.5px, transparent 0.6px),
+        radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.25) 0 0.5px, transparent 0.6px);
         background-size: 170px 170px, 230px 230px, 190px 190px, 260px 260px;
     }
 
     .hud-vignette {
-        background:
-                radial-gradient(circle at center, transparent 45%, rgba(0,0,0,0.34) 100%);
+        background: radial-gradient(circle at center, transparent 45%, rgba(0, 0, 0, 0.34) 100%);
     }
 
     .hud-crosshair {
@@ -757,11 +892,9 @@
     .rail-panel {
         position: relative;
         border: 1px solid var(--line-strong);
-        background:
-                linear-gradient(180deg, rgba(8, 15, 25, 0.92), rgba(5, 11, 19, 0.96));
-        box-shadow:
-                inset 0 0 0 1px rgba(255,255,255,0.02),
-                0 0 18px rgba(20, 90, 170, 0.08);
+        background: linear-gradient(180deg, rgba(8, 15, 25, 0.92), rgba(5, 11, 19, 0.96));
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 0 18px rgba(20, 90, 170, 0.08);
         padding: 0.7rem;
     }
 
@@ -816,8 +949,7 @@
         justify-content: center;
         border-radius: 0 !important;
         border: 1px solid rgba(57, 182, 255, 0.45) !important;
-        background:
-                linear-gradient(180deg, rgba(18, 32, 54, 0.96), rgba(10, 18, 30, 0.96)) !important;
+        background: linear-gradient(180deg, rgba(18, 32, 54, 0.96), rgba(10, 18, 30, 0.96)) !important;
         color: var(--text) !important;
         font-family: var(--title-font);
         text-transform: uppercase;
@@ -869,18 +1001,15 @@
         place-items: center;
         min-height: 4.2rem;
         border: 1px solid var(--line-strong);
-        background:
-                linear-gradient(180deg, rgba(9, 18, 31, 0.95), rgba(4, 9, 16, 0.95));
-        box-shadow:
-                inset 0 0 0 1px rgba(255,255,255,0.02),
-                0 0 16px rgba(57, 182, 255, 0.06);
+        background: linear-gradient(180deg, rgba(9, 18, 31, 0.95), rgba(4, 9, 16, 0.95));
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 0 16px rgba(57, 182, 255, 0.06);
         text-align: center;
     }
 
     .energy-panel {
         border-color: rgba(77, 123, 255, 0.55);
-        background:
-                linear-gradient(180deg, rgba(48, 95, 240, 0.95), rgba(30, 61, 165, 0.95));
+        background: linear-gradient(180deg, rgba(48, 95, 240, 0.95), rgba(30, 61, 165, 0.95));
     }
 
     .energy-panel span,
@@ -888,7 +1017,7 @@
         font-size: 0.62rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: rgba(255,255,255,0.78);
+        color: rgba(255, 255, 255, 0.78);
     }
 
     .energy-panel strong,
@@ -934,7 +1063,7 @@
 
     .center-panel {
         display: grid;
-        grid-template-rows: auto 1fr;
+
         gap: 0.7rem;
         min-width: 0;
         min-height: 0;
@@ -946,8 +1075,7 @@
         gap: 0.7rem;
         align-items: center;
         border: 1px solid var(--line-strong);
-        background:
-                linear-gradient(180deg, rgba(7, 14, 24, 0.92), rgba(5, 10, 18, 0.96));
+        background: linear-gradient(180deg, rgba(7, 14, 24, 0.92), rgba(5, 10, 18, 0.96));
         padding: 0.55rem 0.7rem;
     }
 
@@ -992,18 +1120,16 @@
 
     .board-shell {
         position: relative;
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
+        /*        display: grid;
+				grid-template-rows: auto minmax(0, 1fr) auto;*/
         gap: 0.7rem;
         min-width: 0;
         min-height: 0;
         border: 1px solid rgba(57, 182, 255, 0.22);
-        background:
-                linear-gradient(180deg, rgba(6, 12, 20, 0.8), rgba(3, 8, 14, 0.92));
+        background: linear-gradient(180deg, rgba(6, 12, 20, 0.8), rgba(3, 8, 14, 0.92));
         padding: 0.7rem;
-        box-shadow:
-                inset 0 0 0 1px rgba(255,255,255,0.02),
-                0 0 24px rgba(20, 90, 170, 0.06);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 0 24px rgba(20, 90, 170, 0.06);
     }
 
     .board-frame-label {
@@ -1016,7 +1142,7 @@
     .board-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.9rem;
+        gap: 2vw;
         min-height: 0;
     }
 
@@ -1028,8 +1154,7 @@
         min-width: 0;
         min-height: 0;
         border: 1px dashed rgba(57, 182, 255, 0.22);
-        background:
-                linear-gradient(180deg, rgba(4, 9, 15, 0.9), rgba(2, 6, 10, 0.95));
+        background: linear-gradient(180deg, rgba(4, 9, 15, 0.9), rgba(2, 6, 10, 0.95));
         padding: 0.4rem;
         overflow: hidden;
     }
@@ -1071,12 +1196,15 @@
         min-height: 0;
         padding: 1.15rem 0.55rem 0.55rem;
         border: 1px dashed rgba(57, 182, 255, 0.35);
-        background:
-                linear-gradient(180deg, rgba(2, 6, 12, 0.84), rgba(1, 4, 8, 0.94));
-        transition:
-                border-color 140ms ease,
-                box-shadow 140ms ease,
-                background 140ms ease;
+        background: linear-gradient(180deg, rgb(46 94 166 / 0.3), rgba(1, 4, 8, 0.94));
+        transition: border-color 140ms ease,
+        box-shadow 140ms ease,
+        background 140ms ease;
+    }
+
+    .card-zone--opponent {
+        background: linear-gradient(180deg, rgb(166 46 60 / 0.3), rgba(1, 4, 8, 0.94));
+        border: 1px dashed rgb(255 57 57 / 0.35);
     }
 
     .card-zone::before {
@@ -1101,11 +1229,9 @@
     .card-zone--me.playable-zone {
         cursor: pointer;
         border-color: rgba(151, 255, 56, 0.68);
-        background:
-                linear-gradient(180deg, rgba(13, 28, 10, 0.72), rgba(2, 6, 8, 0.95));
-        box-shadow:
-                inset 0 0 0 1px rgba(151, 255, 56, 0.14),
-                0 0 18px rgba(151, 255, 56, 0.08);
+        background: linear-gradient(180deg, rgba(13, 28, 10, 0.72), rgba(2, 6, 8, 0.95));
+        box-shadow: inset 0 0 0 1px rgba(151, 255, 56, 0.14),
+        0 0 18px rgba(151, 255, 56, 0.08);
     }
 
     .card-zone--me.playable-zone::after {
@@ -1155,8 +1281,6 @@
 
     .location-card {
         position: relative;
-        display: grid;
-        grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 0.5rem;
         width: 100%;
@@ -1165,19 +1289,17 @@
         padding: 0.65rem 0.75rem;
         border: 1px solid rgba(170, 185, 210, 0.22);
         border-radius: 2.7rem;
-        background:
-                linear-gradient(180deg, rgba(31, 35, 44, 0.98), rgba(17, 21, 29, 0.98));
+        background: linear-gradient(180deg, rgba(31, 35, 44, 0.98), rgba(17, 21, 29, 0.98));
         color: white;
         text-align: center;
         cursor: pointer;
-        overflow: hidden;
+
     }
 
     .location-card__scan {
         position: absolute;
         inset: 0;
-        background:
-                linear-gradient(180deg, transparent, rgba(255,255,255,0.025), transparent);
+        background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.025), transparent);
         background-size: 100% 5px;
         opacity: 0.16;
         pointer-events: none;
@@ -1203,13 +1325,14 @@
     }
 
     .location-card__power {
+
         display: grid;
         place-items: center;
         width: 2.3rem;
         height: 2.3rem;
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 999px;
-        background: rgba(56, 60, 72, 0.98);
+        border: 1px solid var(--line-strong);
+		border-radius: 2.7rem;
+        background: rgb(56 60 72 / 0.46);
         color: white;
         font-family: var(--title-font);
         font-size: 1.2rem;
@@ -1245,11 +1368,10 @@
     }
 
     .hand-shell {
-        display: grid;
+
         gap: 0.5rem;
         border: 1px solid rgba(57, 182, 255, 0.18);
-        background:
-                linear-gradient(180deg, rgba(8, 14, 22, 0.92), rgba(4, 8, 14, 0.96));
+        background: linear-gradient(180deg, rgba(8, 14, 22, 0.92), rgba(4, 8, 14, 0.96));
         padding: 0.7rem;
     }
 
@@ -1262,7 +1384,13 @@
     }
 
     .hand-card-button {
-        flex: 1;
+
+        --card-width: clamp(56px, 8vw, 122px);
+
+        aspect-ratio: 5 / 7;
+        position: relative;
+        width: var(--card-width);
+
         container-type: size;
         display: grid;
         place-items: center;
@@ -1271,11 +1399,10 @@
         padding: 0;
         border: 1px solid transparent;
         background: transparent;
-        transition:
-                transform 120ms ease,
-                filter 120ms ease,
-                border-color 120ms ease,
-                box-shadow 120ms ease;
+        transition: transform 120ms ease,
+        filter 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease;
     }
 
     .hand-card-button:hover {
@@ -1295,8 +1422,7 @@
 
     .inspector-panel {
         border: 1px solid rgba(57, 182, 255, 0.24);
-        background:
-                linear-gradient(180deg, rgba(9, 17, 29, 0.95), rgba(5, 10, 18, 0.98));
+        background: linear-gradient(180deg, rgba(9, 17, 29, 0.95), rgba(5, 10, 18, 0.98));
         padding: 0.7rem;
     }
 
@@ -1306,6 +1432,7 @@
         color: var(--text);
         font-size: 0.76rem;
         line-height: 1.35;
+		overflow: auto;
     }
 
     .inspector > strong {
@@ -1360,10 +1487,9 @@
     .card-detail {
         display: grid;
         gap: 0.7rem;
-        width: min(95vw, 62rem);
+        width: min(95vw, 80rem);
         border: 1px solid rgba(57, 182, 255, 0.32);
-        background:
-                linear-gradient(180deg, rgba(7, 13, 22, 0.98), rgba(4, 8, 14, 0.99));
+        background: linear-gradient(180deg, rgba(7, 13, 22, 0.98), rgba(4, 8, 14, 0.99));
         padding: 0.9rem;
         box-shadow: 0 0 30px rgba(57, 182, 255, 0.08);
     }
@@ -1380,8 +1506,7 @@
         display: grid;
         gap: 0.55rem;
         border: 1px solid rgba(57, 182, 255, 0.22);
-        background:
-                linear-gradient(180deg, rgba(8, 15, 26, 0.96), rgba(4, 8, 14, 0.98));
+        background: linear-gradient(180deg, rgba(8, 15, 26, 0.96), rgba(4, 8, 14, 0.98));
         padding: 0.8rem;
         color: var(--text);
     }
@@ -1417,6 +1542,13 @@
         letter-spacing: 0.12em;
     }
 
+    .card-detail-stat-row b {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .card-detail-stats ul {
         display: grid;
         gap: 0.25rem;
@@ -1439,6 +1571,107 @@
     .card-detail-card {
         display: grid;
         place-items: center;
+    }
+
+    .location-detail__grid {
+        grid-template-columns: minmax(14rem, 1fr) minmax(14rem, 0.85fr) minmax(14rem, 1fr);
+    }
+
+    .location-detail-card {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 1rem;
+        width: min(100%, 18rem);
+        min-height: 22rem;
+        overflow: hidden;
+        border: 1px solid rgba(170, 185, 210, 0.28);
+        border-radius: 1.7rem;
+        background:
+                radial-gradient(circle at 50% 18%, rgba(57, 182, 255, 0.14), transparent 32%),
+                linear-gradient(180deg, rgba(31, 35, 44, 0.98), rgba(17, 21, 29, 0.98));
+        padding: 1rem;
+        color: white;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 24px rgba(57, 182, 255, 0.1);
+    }
+
+    .location-detail-card--unrevealed {
+        background:
+                radial-gradient(circle at 50% 18%, rgba(255, 177, 86, 0.12), transparent 32%),
+                linear-gradient(180deg, rgba(28, 30, 37, 0.98), rgba(12, 15, 21, 0.98));
+    }
+
+    .location-detail-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.025), transparent);
+        background-size: 100% 6px;
+        opacity: 0.2;
+    }
+
+    .location-detail-card__topbar,
+    .location-detail-card__totals {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .location-detail-card__topbar {
+        color: var(--muted);
+        font-size: 0.65rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .location-detail-card__body {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: 0.75rem;
+        text-align: center;
+    }
+
+    .location-detail-card__body strong {
+        font-family: var(--title-font);
+        font-size: 1.5rem;
+        line-height: 1.05;
+        text-transform: uppercase;
+    }
+
+    .location-detail-card__body p {
+        margin: 0;
+        color: rgba(230, 239, 255, 0.88);
+        font-size: 0.82rem;
+        line-height: 1.4;
+    }
+
+    .location-detail-card__totals > div {
+        display: grid;
+        place-items: center;
+        width: 3.2rem;
+        height: 3.2rem;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: rgba(3, 7, 12, 0.48);
+    }
+
+    .location-detail-card__totals span {
+        color: var(--muted);
+        font-size: 0.55rem;
+        letter-spacing: 0.1em;
+    }
+
+    .location-detail-card__totals b {
+        font-family: var(--title-font);
+        font-size: 1.2rem;
+        line-height: 1;
     }
 
     .card-detail-effect p {

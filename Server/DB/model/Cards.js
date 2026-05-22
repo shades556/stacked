@@ -124,6 +124,22 @@ const DEFAULT_CARD_DEFINITIONS = Object.freeze([
         sortOrder: 120
     },
     {
+        cardId: 'gpt',
+        behaviorKey: 'gpt',
+        title: 'GPT',
+        basePower: 2,
+        cost: 3,
+        text: 'On Reveal: Add a AI hallucination with -10 power to the right location',
+        effects: [
+            { trigger: 'onReveal', type: 'ADD_CARD', cardId: 'hallucination' }
+        ],
+        borderColor: '#70d900',
+        backgroundCss: 'linear-gradient(180deg, #25262a 0%, #18191d 58%, #0d0d0f 100%)',
+        logoText: 'GPT',
+        rarity: 'common',
+        sortOrder: 160
+    },
+    {
         cardId: 'recursion',
         behaviorKey: 'recursion',
         title: 'Recursion',
@@ -231,7 +247,7 @@ class Cards {
     }
 
     static async activeDefinitions() {
-        const cards = await this.find({ enabled: true })
+        const cards = await this.find({ enabled: true, cardId: {$in: ['gpt', 'recursion', 'hallucination']} })
             .sort({ sortOrder: 1, cost: 1, title: 1 })
             .lean()
 

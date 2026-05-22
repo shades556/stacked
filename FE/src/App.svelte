@@ -30,6 +30,6 @@
 </script>
 
 
-<main class='h-screen flex flex-col border w-screen  '>
+<main class='h-screen flex flex-col border w-screen bg-blue-900/20  '>
 	<Router {routes}/>
 </main>

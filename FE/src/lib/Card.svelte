@@ -124,7 +124,7 @@
 	</div>
 </div>
 
-<style>
+<style >
     .snap-card {
         --card-width: clamp(56px, 8vw, 122px);
         --card-unit: calc(var(--card-width) / 120);
