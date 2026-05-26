@@ -11,6 +11,7 @@
 
     matchState.gameUpdate()
 
+
     let selected = $state(null)
     let stagedPlays = $state([])
     let inspected = $state(null)
@@ -293,7 +294,7 @@
 		<main class='center-panel'>
 
 
-			<div class='board-shell flex flex-col h-full border border-red-500 mx-6'>
+			<div class='board-shell'>
 
 
 				<div class='board-grid h-[80%]'>
@@ -330,7 +331,7 @@
 							</div>
 
 							<div
-									class='location-card flex flex-col items-center justify-center'
+									class='location-card'
 									onclick={() => openLocationDetail(b)}
 									onkeydown={(event) => {
                                     if (event.key !== 'Enter' && event.key !== ' ') return
@@ -343,7 +344,7 @@
 							>
 
 								<div class='absolute  z-10 translate-0 -top-3.5'>
-									<div class='location-card__power location-card__power--opponent'  class:!bg-blue-900={hasMorePower(powerOp, powerMe)}>
+									<div class='location-card__power location-card__power--opponent' class:location-card__power--winning={hasMorePower(powerOp, powerMe)}>
 										{powerOp}
 									</div>
 								</div>
@@ -358,7 +359,7 @@
 									{/if}
 								</div>
 								<div class='absolute  z-10 translate-0 -bottom-3.5'>
-									<div class='location-card__power location-card__power--me' class:!bg-blue-900={hasMorePower(powerMe, powerOp)}>
+									<div class='location-card__power location-card__power--me' class:location-card__power--winning={hasMorePower(powerMe, powerOp)}>
 										{powerMe}
 									</div>
 								</div>
@@ -726,37 +727,12 @@
 {/if}
 
 <style>
-    :global(:root) {
-        --bg-0: #03060a;
-        --bg-1: #081019;
-        --bg-2: #0b1622;
-        --panel: rgba(7, 14, 24, 0.86);
-        --panel-2: rgba(10, 18, 31, 0.92);
-
-        --line: rgba(62, 144, 255, 0.24);
-        --line-strong: rgba(62, 144, 255, 0.48);
-        --line-faint: rgba(62, 144, 255, 0.09);
-
-        --text: #d8ebff;
-        --muted: #7392b4;
-
-        --blue: #39b6ff;
-        --blue-2: #64ccff;
-        --orange: #ffb156;
-        --orange-2: #ff8f2b;
-        --green: #97ff38;
-        --red: #ff6464;
-
-        --hud-font: "IBM Plex Mono", "JetBrains Mono", monospace;
-        --title-font: "Orbitron", "Rajdhani", "IBM Plex Mono", monospace;
-    }
-
     .match-hud {
         position: relative;
         height: 100%;
         min-height: 100%;
         overflow: hidden;
-        color: var(--text);
+        color: var(--hud-text);
 
         font-family: var(--hud-font);
     }
@@ -874,7 +850,7 @@
         margin-bottom: 0.6rem;
         border: 1px solid rgba(151, 255, 56, 0.45);
         background: rgba(151, 255, 56, 0.08);
-        color: var(--green);
+        color: var(--hud-green);
         font-size: 0.72rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -891,7 +867,7 @@
 
     .rail-panel {
         position: relative;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--hud-line-strong);
         background: linear-gradient(180deg, rgba(8, 15, 25, 0.92), rgba(5, 11, 19, 0.96));
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
         0 0 18px rgba(20, 90, 170, 0.08);
@@ -928,7 +904,7 @@
         justify-content: space-between;
         gap: 0.5rem;
         margin-bottom: 0.55rem;
-        color: var(--blue);
+        color: var(--hud-blue);
         font-size: 0.68rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -940,29 +916,8 @@
     .inspector-panel__header small,
     .card-detail__topline small,
     .sector-header small {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.6rem;
-    }
-
-    :global(.player-chip) {
-        width: 100%;
-        justify-content: center;
-        border-radius: 0 !important;
-        border: 1px solid rgba(57, 182, 255, 0.45) !important;
-        background: linear-gradient(180deg, rgba(18, 32, 54, 0.96), rgba(10, 18, 30, 0.96)) !important;
-        color: var(--text) !important;
-        font-family: var(--title-font);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        box-shadow: 0 0 16px rgba(57, 182, 255, 0.08);
-    }
-
-    .player-chip--me {
-        color: var(--green) !important;
-    }
-
-    .player-chip--opponent {
-        color: var(--orange) !important;
     }
 
     .identity-lines {
@@ -980,7 +935,7 @@
         gap: 0.5rem;
         border-top: 1px solid rgba(57, 182, 255, 0.1);
         padding-top: 0.35rem;
-        color: var(--text);
+        color: var(--hud-text);
         font-size: 0.72rem;
     }
 
@@ -988,7 +943,7 @@
     .micro-stats span,
     .inspector-stats span,
     .phase-subline {
-        color: var(--muted);
+        color: var(--hud-muted);
         text-transform: uppercase;
         letter-spacing: 0.08em;
         font-size: 0.62rem;
@@ -1000,7 +955,7 @@
         display: grid;
         place-items: center;
         min-height: 4.2rem;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--hud-line-strong);
         background: linear-gradient(180deg, rgba(9, 18, 31, 0.95), rgba(4, 9, 16, 0.95));
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
         0 0 16px rgba(57, 182, 255, 0.06);
@@ -1025,7 +980,7 @@
         color: white;
         font-size: 1.8rem;
         line-height: 1;
-        font-family: var(--title-font);
+        font-family: var(--hud-title-font);
     }
 
     .status-panel {
@@ -1038,27 +993,6 @@
 
     .phase-subline {
         margin-top: 0.5rem;
-    }
-
-    :global(.action-button) {
-        width: 100%;
-        min-height: 3rem;
-        border-radius: 0 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-family: var(--hud-font);
-    }
-
-    :global(.retreat-button) {
-        border: 1px solid rgba(255, 100, 100, 0.42) !important;
-        background: rgba(87, 22, 22, 0.62) !important;
-        color: #ff7a7a !important;
-    }
-
-    :global(.end-turn-button) {
-        border: 1px solid rgba(255, 177, 86, 0.42) !important;
-        background: rgba(60, 38, 14, 0.66) !important;
-        color: var(--orange) !important;
     }
 
     .center-panel {
@@ -1074,7 +1008,7 @@
         grid-template-columns: 1fr auto auto;
         gap: 0.7rem;
         align-items: center;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--hud-line-strong);
         background: linear-gradient(180deg, rgba(7, 14, 24, 0.92), rgba(5, 10, 18, 0.96));
         padding: 0.55rem 0.7rem;
     }
@@ -1085,15 +1019,15 @@
     }
 
     .topbar-block span {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.6rem;
         letter-spacing: 0.16em;
         text-transform: uppercase;
     }
 
     .topbar-block strong {
-        color: var(--text);
-        font-family: var(--title-font);
+        color: var(--hud-text);
+        font-family: var(--hud-title-font);
         font-size: 0.95rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -1112,7 +1046,7 @@
         min-height: 2rem;
         border: 1px solid rgba(57, 182, 255, 0.3);
         background: rgba(10, 20, 34, 0.85);
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.65rem;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -1120,9 +1054,11 @@
 
     .board-shell {
         position: relative;
-        /*        display: grid;
-				grid-template-rows: auto minmax(0, 1fr) auto;*/
+        display: flex;
+        flex-direction: column;
         gap: 0.7rem;
+        height: 100%;
+        margin-inline: 1.5rem;
         min-width: 0;
         min-height: 0;
         border: 1px solid rgba(57, 182, 255, 0.22);
@@ -1133,7 +1069,7 @@
     }
 
     .board-frame-label {
-        color: var(--blue);
+        color: var(--hud-blue);
         font-size: 0.68rem;
         letter-spacing: 0.16em;
         text-transform: uppercase;
@@ -1219,7 +1155,7 @@
         position: absolute;
         top: 0.28rem;
         left: 0.45rem;
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.56rem;
         text-transform: uppercase;
         letter-spacing: 0.14em;
@@ -1239,7 +1175,7 @@
         position: absolute;
         right: 0.45rem;
         bottom: 0.35rem;
-        color: var(--green);
+        color: var(--hud-green);
         font-size: 0.56rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -1253,11 +1189,6 @@
         min-width: 0;
         min-height: 0;
         place-items: center;
-    }
-
-    .card-slot :global(.snap-card),
-    .card-slot :global(.card-back) {
-        --card-width: min(100cqw, calc(100cqh * 0.7142857));
     }
 
     .pending-card {
@@ -1281,6 +1212,9 @@
 
     .location-card {
         position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         align-items: center;
         gap: 0.5rem;
         width: 100%;
@@ -1318,7 +1252,7 @@
     }
 
     .location-card__meta {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.56rem;
         letter-spacing: 0.16em;
         text-transform: uppercase;
@@ -1330,11 +1264,11 @@
         place-items: center;
         width: 2.3rem;
         height: 2.3rem;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--hud-line-strong);
 		border-radius: 2.7rem;
         background: rgb(56 60 72 / 0.46);
         color: white;
-        font-family: var(--title-font);
+        font-family: var(--hud-title-font);
         font-size: 1.2rem;
         font-weight: 900;
         flex-shrink: 0;
@@ -1344,7 +1278,7 @@
         max-width: 100%;
         overflow: hidden;
         color: white;
-        font-family: var(--title-font);
+        font-family: var(--hud-title-font);
         font-size: clamp(0.95rem, 1.35vw, 1.35rem);
         font-weight: 800;
         line-height: 1.05;
@@ -1362,7 +1296,7 @@
     }
 
     .location-state {
-        color: var(--orange);
+        color: var(--hud-orange);
         letter-spacing: 0.12em;
         text-transform: uppercase;
     }
@@ -1416,10 +1350,6 @@
         transform: translateY(-6px);
     }
 
-    .hand-zone :global(.snap-card) {
-        --card-width: min(100cqw, calc(100cqh * 0.7142857));
-    }
-
     .inspector-panel {
         border: 1px solid rgba(57, 182, 255, 0.24);
         background: linear-gradient(180deg, rgba(9, 17, 29, 0.95), rgba(5, 10, 18, 0.98));
@@ -1429,15 +1359,15 @@
     .inspector {
         display: grid;
         gap: 0.5rem;
-        color: var(--text);
+        color: var(--hud-text);
         font-size: 0.76rem;
         line-height: 1.35;
 		overflow: auto;
     }
 
     .inspector > strong {
-        color: var(--blue);
-        font-family: var(--title-font);
+        color: var(--hud-blue);
+        font-family: var(--hud-title-font);
         letter-spacing: 0.08em;
         text-transform: uppercase;
     }
@@ -1464,13 +1394,13 @@
     }
 
     .inspector-delta {
-        color: var(--orange);
+        color: var(--hud-orange);
         font-weight: 700;
     }
 
     .inspector small {
         grid-column: 2;
-        color: var(--muted);
+        color: var(--hud-muted);
     }
 
     .card-detail-backdrop {
@@ -1508,13 +1438,13 @@
         border: 1px solid rgba(57, 182, 255, 0.22);
         background: linear-gradient(180deg, rgba(8, 15, 26, 0.96), rgba(4, 8, 14, 0.98));
         padding: 0.8rem;
-        color: var(--text);
+        color: var(--hud-text);
     }
 
     .card-detail-stats > strong,
     .card-detail-effect strong {
-        color: var(--orange);
-        font-family: var(--title-font);
+        color: var(--hud-orange);
+        font-family: var(--hud-title-font);
         letter-spacing: 0.08em;
         text-transform: uppercase;
     }
@@ -1536,7 +1466,7 @@
     }
 
     .card-detail-stat-row span {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.64rem;
         text-transform: uppercase;
         letter-spacing: 0.12em;
@@ -1565,7 +1495,7 @@
 
     .card-detail-stats li small {
         grid-column: 2;
-        color: var(--muted);
+        color: var(--hud-muted);
     }
 
     .card-detail-card {
@@ -1622,7 +1552,7 @@
     }
 
     .location-detail-card__topbar {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.65rem;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -1639,7 +1569,7 @@
     }
 
     .location-detail-card__body strong {
-        font-family: var(--title-font);
+        font-family: var(--hud-title-font);
         font-size: 1.5rem;
         line-height: 1.05;
         text-transform: uppercase;
@@ -1657,19 +1587,19 @@
         place-items: center;
         width: 3.2rem;
         height: 3.2rem;
-        border: 1px solid var(--line-strong);
+        border: 1px solid var(--hud-line-strong);
         border-radius: 999px;
         background: rgba(3, 7, 12, 0.48);
     }
 
     .location-detail-card__totals span {
-        color: var(--muted);
+        color: var(--hud-muted);
         font-size: 0.55rem;
         letter-spacing: 0.1em;
     }
 
     .location-detail-card__totals b {
-        font-family: var(--title-font);
+        font-family: var(--hud-title-font);
         font-size: 1.2rem;
         line-height: 1;
     }

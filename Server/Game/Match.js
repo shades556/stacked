@@ -36,12 +36,14 @@ export class Match {
         this.status = data.status ?? MATCH_STATUS.OPEN
         this.phase = data.phase ?? MATCH_PHASE.WAITING
         this.turn = data.turn ?? 1
+        this.turns = data.turns ?? 6
         this.priorityPlayer = data.priorityPlayer ?? null
         this.players = data.players ?? []
         this.locations = (data.locations ?? []).map(location => createLocation(location, this))
         this.cards = (data.cards ?? []).map(card => createCard(card))
         this.cardDefinitions = data.cardDefinitions ?? []
         this.revealQueue = data.revealQueue ?? []
+        this.winner = data.winner ?? {}
         this.log = data.log ?? []
     }
 
@@ -60,6 +62,7 @@ export class Match {
     getCard(instanceId) {
         return this.cards.find(card => card.instanceId === instanceId)
     }
+
     getCardById(cardId) {
         return this.cards.find(card => card.cardId === cardId)
     }
@@ -118,6 +121,7 @@ export class Match {
         if (this.canStart()) {
             this.start(cardDefinitions, locationDefinitions)
         }
+
     }
 
     start(cardDefinitions = [], locationDefinitions = []) {
@@ -371,9 +375,9 @@ export class Match {
     cardTemplateFor(cardId, ownerId = null) {
         return this.cardDefinitions.find(definition => definition.cardId === cardId)
             ?? this.cards.find(card =>
-            card.cardId === cardId &&
-            String(card.ownerId) === String(ownerId)
-        ) ?? this.cards.find(card => card.cardId === cardId)
+                card.cardId === cardId &&
+                String(card.ownerId) === String(ownerId)
+            ) ?? this.cards.find(card => card.cardId === cardId)
     }
 
     cardDataFromTemplate(template) {
@@ -583,6 +587,44 @@ export class Match {
         return this.revealLocation(location.id)
     }
 
+    calcWinner() {
+        const [p1, p2] = this.players.map(player => player.player_id)
+
+        let p1LocationsWon = 0
+        let p2LocationsWon = 0
+        let p1TotalPower = 0
+        let p2TotalPower = 0
+
+        for (const location of this.locations) {
+            const p1Power = this.locationPowerBreakdown(p1, location.id).total
+            const p2Power = this.locationPowerBreakdown(p2, location.id).total
+
+            p1TotalPower += p1Power
+            p2TotalPower += p2Power
+
+            if (p1Power > p2Power) p1LocationsWon++
+            else if (p2Power > p1Power) p2LocationsWon++
+        }
+
+        if (p1LocationsWon > p2LocationsWon) {
+            return { result: 'winner', player_id: p1 }
+        }
+
+        if (p2LocationsWon > p1LocationsWon) {
+            return { result: 'winner', player_id: p2 }
+        }
+
+        if (p1TotalPower > p2TotalPower) {
+            return { result: 'winner', player_id: p1 }
+        }
+
+        if (p2TotalPower > p1TotalPower) {
+            return { result: 'winner', player_id: p2 }
+        }
+
+        return { result: 'tie' }
+    }
+
     modifierSource(sourceId) {
         if ( ! sourceId) return null
 
@@ -662,23 +704,23 @@ export class Match {
     getLocationTargets(location, modifier, playerId) {
         switch (modifier.target) {
             case 'near_locations': {
-                const sourceCard = this.getCard(modifier.sourceId);
-                if (!sourceCard) return false;
+                const sourceCard = this.getCard(modifier.sourceId)
+                if ( ! sourceCard) return false
 
                 // Only affect the owner's side
                 if (String(sourceCard.ownerId) !== String(playerId)) {
-                    return false;
+                    return false
                 }
 
-                const sourceLocation = this.locationFor(sourceCard.locationId);
-                if (!sourceLocation) return false;
+                const sourceLocation = this.locationFor(sourceCard.locationId)
+                if ( ! sourceLocation) return false
 
                 // Nearby = exactly one position away
-                return Math.abs(location.order - sourceLocation.order) === 1;
+                return Math.abs(location.order - sourceLocation.order) === 1
             }
 
             default:
-                return String(modifier.target?.instanceId) === String(location.id);
+                return String(modifier.target?.instanceId) === String(location.id)
         }
     }
 
@@ -747,19 +789,23 @@ export class Match {
 
     finishTurn() {
         const nextTurn = this.turn + 1
-        const ended = nextTurn > MAX_TURNS
+        const ended = nextTurn > this.turns
+
 
         for (const player of this.players) {
             player.lockedIn = false
-            player.energy = Math.min(player.energy + nextTurn, MAX_ENERGY)
-            this.drawCard(player.player_id)
+            player.energy = Math.min(nextTurn, MAX_ENERGY)
+            if ( ! ended) this.drawCard(player.player_id)
         }
 
-        this.turn = nextTurn
+        if ( ! ended) this.turn = nextTurn
         this.phase = ended ? MATCH_PHASE.ENDED : MATCH_PHASE.PLAY
         this.status = ended ? MATCH_STATUS.ENDED : MATCH_STATUS.ACTIVE
         this.priorityPlayer = this.players[1]?.player_id ?? this.players[0]?.player_id ?? null
         this.revealQueue = []
+        if (ended) {
+            this.winner = this.calcWinner()
+        }
 
         if ( ! ended) {
             this.revealLocationForTurn(nextTurn)
@@ -776,6 +822,7 @@ export class Match {
             status: this.status,
             phase: this.phase,
             turn: this.turn,
+            turns: this.turns,
             priorityPlayer: String(this.priorityPlayer) === String(playerId),
             me: me ? this.playerView(me, true) : null,
             opponent: opponent ? {
@@ -821,7 +868,8 @@ export class Match {
                             : [])
                     ] : []
                 }
-            }))
+            })),
+            winner: this.winner
         }
     }
 
@@ -860,6 +908,8 @@ export class Match {
             status: this.status,
             phase: this.phase,
             turn: this.turn,
+            turns: this.turns,
+            winner: this.winner,
             priorityPlayer: this.priorityPlayer,
             players: this.players,
             locations: this.locations.map(location => location.toData()),

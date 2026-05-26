@@ -1,6 +1,6 @@
 import { player } from '../../Pages/Player.svelte.js'
 import { connectionState } from '../../Socket.svelte.js'
-import { getSession, signIn, signOut, signUp } from './sign-up.js'
+import { getSession, signIn, signInMicrosoft, signOut, signUp } from './sign-up.js'
 
 export const sessionState = $state({
     session: null,
@@ -60,6 +60,21 @@ export const sessionState = $state({
 
         try {
             await signIn(email, password)
+            await this.refresh()
+        } catch (err) {
+            this.error = err.message || 'Sign in failed'
+            throw err
+        } finally {
+            this.loading = false
+        }
+    },
+
+    async signInMS() {
+        this.loading = true
+        this.error = null
+
+        try {
+            await signInMicrosoft()
             await this.refresh()
         } catch (err) {
             this.error = err.message || 'Sign in failed'

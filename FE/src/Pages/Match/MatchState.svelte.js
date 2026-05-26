@@ -9,6 +9,7 @@ export let matchState = $state({
     error: null,
 
     async getMatches() {
+        console.log('getMatches##')
         this.matches = await connectionState.query('Matches', 'getMatches')
             .then(matches => {
                     return matches
@@ -29,6 +30,13 @@ export let matchState = $state({
         connectionState.code.socket.on('gameUpdate', (data) => {
             console.log('gameUpdate', data)
             this.game = data
+        })
+    },
+
+    async newMatch() {
+        connectionState.code.socket.on('match_list_update', () => {
+            console.log('match_list_update')
+            this.getMatches()
         })
     }
 

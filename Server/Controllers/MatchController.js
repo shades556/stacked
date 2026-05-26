@@ -18,6 +18,7 @@ export class MatchController {
 
         await this.service.joinGame(match_id, sessionPlayer)
         await this.broadcastMatchState(match_id)
+        this.io.emit('match_list_update')
     }
 
     async endTurn({ match_id, player_id, plays = [] }, socket) {

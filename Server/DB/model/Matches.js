@@ -66,7 +66,9 @@ const MatchSchema = new mongoose.Schema({
         default: MATCH_PHASE.WAITING
     },
     turn: { type: Number, required: true, default: 1 },
+    turns: { type: Number, required: true, default: 6 },
     priorityPlayer: { type: String, default: null },
+    winner: { type: Object, default: {} },
     players: { type: [PlayerSchema], default: [] },
     locations: { type: [LocationSchema], default: [] },
     cards: { type: [CardSchema], default: [] },
@@ -80,11 +82,18 @@ const MatchSchema = new mongoose.Schema({
 
 class Matches {
     static getMatches() {
-        return this.find().sort({ createdAt: -1 })
+        return this.find({ status: MATCH_STATUS.OPEN }).sort({ createdAt: -1 })
     }
 
-    static createMatch() {
-        return this.create({})
+    static async createMatch(socket, io) {
+        console.log(socket.data.user.name)
+        let hasOpenMatch = await this.find({ status: MATCH_STATUS.OPEN, 'players.username': socket.data.user.name })
+        console.log(hasOpenMatch)
+        if (hasOpenMatch.length) throw new Error('Already opened match')
+
+        await this.create({})
+        io.emit('match_list_update')
+        return {}
     }
 }
 

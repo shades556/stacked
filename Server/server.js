@@ -53,11 +53,12 @@ const handler = async (io, socket, action, event, ...args) => {
 
         if (isEvent) {
             try {
-                let data = await model[action][event](...args)
+                let data = await model[action][event](...args, socket, io)
                 if ( ! data) data = {}
                 data.queryId = queryId
                 cb(data)
             } catch (err) {
+                console.error(err)
                 cb(err.message || JSON.stringify(err), false)
             }
         } else {

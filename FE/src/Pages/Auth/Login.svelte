@@ -22,6 +22,7 @@
     }
 
 
+
 </script>
 <div class='flex flex-col gap-3 items-center justify-center h-full container mx-auto'>
 	<h2>STACKED</h2>
@@ -70,7 +71,6 @@
 			{#if sessionState.error}
 				<div class='text-red-400'>{sessionState.error}</div>
 			{/if}
-
 		</Card.Footer>
 	</Card.Root>
 

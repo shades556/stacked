@@ -24,6 +24,14 @@ export const signIn = async (email, password) => {
         callbackURL: '/',
     }))
 }
+export const signInMicrosoft = async () => {
+    const data = await authClient.signIn.social({
+        provider: 'microsoft',
+        callbackURL: '/home', // The URL to redirect to after the sign in
+    })
+    console.log(data)
+
+}
 
 export const signOut = async () => {
     return unwrap(await authClient.signOut())
